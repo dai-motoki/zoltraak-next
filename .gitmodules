@@ -1,0 +1,3 @@
+[submodule "frontend-next"]
+	path = frontend-next
+	url = https://github.com/dai-motoki/frontend-next.git
