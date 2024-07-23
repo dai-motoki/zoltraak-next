@@ -2,14 +2,13 @@
 
 これはNext.js、Redux、Supabaseを使用して構築されたシンプルなタスク管理アプリケーションで、Google認証機能を備えています。
 
-## プロジェクト構造
-
-（ここにプロジェクトのディレクトリ構造を記載）
-
 ## 始め方
 
 1. このリポジトリをクローンします
+git clone https://github.com/dai-motoki/zoltraak-next.git
+
 2. 必要なパッケージをインストールします：
+    cd zoltraak-next
    pip install -r requirements.txt
 
 3. ビルドスクリプトを実行します：

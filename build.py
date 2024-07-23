@@ -7,7 +7,7 @@ import time
 import shutil
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich import print as rprint
 import requests
 from dotenv import load_dotenv
@@ -29,6 +29,36 @@ def load_env_variables():
         console.print("[green].env.localファイルから環境変数を読み込みました。[/green]")
     else:
         console.print("[yellow].env.localファイルが見つかりません。手動で入力が必要です。[/yellow]")
+        create_env_local_file()
+
+def create_env_local_file():
+    global supabase_url, supabase_anon_key
+    console.print("[cyan]Supabaseプロジェクトの情報を入力してください。[/cyan]")
+    console.print("[cyan]環境変数の取得方法:[/cyan]")
+    console.print("1. Supabaseダッシュボード (https://app.supabase.io/) にアクセスし、ログインします。")
+    console.print("2. プロジェクトを選択します。プロジェクトがない場合は「New Project」をクリックして作成します。")
+    console.print("3. 左側のメニューから「Project Settings」>「API」を選択します。")
+    console.print("4. 「プロジェクトURL」と「Project API keys」の「anon public」キーをコピーします。")
+
+    while True:
+        supabase_url = input("Project URL を入力してください: ")
+        if supabase_url.startswith("https://") and supabase_url.endswith(".supabase.co"):
+            break
+        console.print("[bold red]無効なSupabase URLです。正しいURLを入力してください。[/bold red]")
+
+    while True:
+        supabase_anon_key = input("Project API keys の anon public キーを入力してください: ")
+        if supabase_anon_key.startswith("eyJ"):
+            break
+        console.print("[bold red]無効な匿名キーです。正しいキーを入力してください。[/bold red]")
+
+    env_content = f"""
+NEXT_PUBLIC_SUPABASE_URL={supabase_url}
+NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
+    """.strip()
+
+    create_file('.env.local', env_content)
+    console.print("[green]新しい.env.localファイルを作成しました。[/green]")
 
 async def run_dev_server(project_dir):
     os.chdir(project_dir)
@@ -194,24 +224,34 @@ def setup_project(PROJECT_NAME, USE_TYPESCRIPT):
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         transient=True
     ) as progress:
-        task1 = progress.add_task("[cyan]Next.jsプロジェクトを作成しています...", total=None)
+        task1 = progress.add_task("[cyan]Next.jsプロジェクトを作成しています...", total=100)
         result = run_command(" ".join(create_next_app_command))
-        progress.update(task1, completed=True)
+        for i in range(100):
+            time.sleep(0.1)  # 0.1秒ごとに進捗を更新
+            progress.update(task1, advance=1)
+        progress.update(task1, completed=100)
         if result.returncode != 0:
-            raise Exception(f"Next.jsプジェクトの作成に失敗しました: {result.stderr}")
+            raise Exception(f"Next.jsプロジェクトの作成に失敗しました: {result.stderr}")
 
     os.chdir(PROJECT_NAME)
 
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         transient=True
     ) as progress:
-        task2 = progress.add_task("[cyan]追加の依存関係をインストールしています...", total=None)
+        task2 = progress.add_task("[cyan]追加の依存関係をインストールしています...", total=10)
         result = run_command("npm install @reduxjs/toolkit react-redux @supabase/auth-helpers-nextjs @supabase/auth-helpers-react @supabase/supabase-js framer-motion")
-        progress.update(task2, completed=True)
+        for i in range(100):
+            time.sleep(0.1)  # 0.1秒ごとに進捗を更新
+            progress.update(task2, advance=1)
+        progress.update(task2, completed=100)
         if result.returncode != 0:
             raise Exception(f"依存関係のインストールに失敗しました: {result.stderr}")
 
@@ -598,7 +638,7 @@ def setup_supabase(project_id):
         console.print("[cyan]1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。[/cyan]")
         console.print("[cyan]2. 新しいプロジェクトを作成します。[/cyan]")
         console.print("[cyan]3. 左側のメニューから「APIとサービス」>「OAuth同意画面」を選択し、設定します。[/cyan]")
-        console.print("[cyan]4. APIとサービス」>「認証情報」から「認��情報を作成>「OAuthクライアントID」をクリックします。[/cyan]")
+        console.print("[cyan]4. APIとサービス」>「認証情報」から「認情報を作成>「OAuthクライアントID」をクリックします。[/cyan]")
         console.print("[cyan]5. アプリケーションの種類として「ウェブアプリケーション」を選択します。[/cyan]")
         console.print("[cyan]6. 「承認済みのリダイレクトURI」に以下のURLを追加します:[/cyan]")
         console.print(f"[cyan]   https://{project_id}.supabase.co/auth/v1/callback[/cyan]")
