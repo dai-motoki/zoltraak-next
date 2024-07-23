@@ -1,0 +1,10 @@
+# frontend-next ディレクトリ以下のすべてのファイルとフォルダを無視
+frontend-next/
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
