@@ -3,6 +3,47 @@ import os
 import sys
 import json
 import time
+import shutil
+
+def main():
+    PROJECT_NAME = "frontend-next"
+    USE_TYPESCRIPT = len(sys.argv) <= 1 or sys.argv[1].lower() != 'no'
+
+    # プロジェクトディレクトリの準備
+    if os.path.exists(PROJECT_NAME):
+        print(f"{PROJECT_NAME}ディレクトリが既に存在します。削除します...")
+        shutil.rmtree(PROJECT_NAME)
+
+    # プロジェクトのセットアップ
+    setup_project(PROJECT_NAME, USE_TYPESCRIPT)
+
+    # プロジェクトディレクトリに移動
+    os.chdir(PROJECT_NAME)
+
+    # プロジェクトファイルの作成
+    create_project_files(PROJECT_NAME, USE_TYPESCRIPT)
+
+    # package.jsonの更新
+    update_package_json()
+
+    # Supabaseのセットアップ
+    supabase_url, supabase_anon_key = setup_supabase()
+
+    # .env.localファイルの作成（Supabase情報がある場合）
+    if supabase_url and supabase_anon_key:
+        create_file('.env.local', f"""
+NEXT_PUBLIC_SUPABASE_URL={supabase_url}
+NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
+        """.strip())
+
+    # Vercelへのデプロイ
+    deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key) if supabase_url and supabase_anon_key else None
+
+    # README.mdの作成
+    create_readme(PROJECT_NAME, deploy_url)
+
+    # セットアップ完了メッセージの表示
+    print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
 
 def run_command(command, shell=True):
     return subprocess.run(command, shell=shell, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -20,109 +61,7 @@ def create_file(path, content):
     
     print(f"ファイル '{path}' が正常に作成されました。")
 
-def generate_file_tree(startpath):
-    tree = []
-    for root, dirs, files in os.walk(startpath):
-        level = root.replace(startpath, '').count(os.sep)
-        indent = ' ' * 4 * (level)
-        tree.append('{}{}/'.format(indent, os.path.basename(root)))
-        subindent = ' ' * 4 * (level + 1)
-        for f in files:
-            tree.append('{}{}'.format(subindent, f))
-    return '\n'.join(tree)
-
-def setup_supabase():
-    print("Supabaseプロジェクトの情報を入力してください。")
-    print("\nGoogle認証の設定手順:")
-    print("1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。")
-    print("2. 新しいプロジェクトを作成します。")
-    print("3. 左側のメニューから「APIとサービス」>「OAuth同意画面」を選択し、設定します。")
-    print("4. 「APIとサービス」>「認証情報」から、「認証情報を作成」>「OAuthクライアントID」をクリックします。")
-    print("5. アプリケーションの種類として「ウェブアプリケーション」を選択します。")
-    print("6. 「承認済みのリダイレクトURI」に以下のURLを追加します:")
-    print("   https://[YOUR_PROJECT_ID].supabase.co/auth/v1/callback")
-    print("   （[YOUR_PROJECT_ID]は実際のSupabaseプロジェクトIDに置き換えてください）")
-    print("7. 「作成」をクリックし、表示されるクライアントIDとクライアントシークレットをコピーします。")
-    print("8. Supabaseダッシュボードの「認証」>「プロバイダー」>「Google」に移動します。")
-    print("9. 「有効」をオンにし、コピーしたクライアントIDとクライアントシークレットを貼り付けます。")
-    print("10. 「保存」をクリックします。")
-    print("\n上記の手順を完了してから、以下の情報を入力してください。\n")
-
-    supabase_url = input("Supabase URL を入力してください (例: https://xxxxxxxxxxxxxxxx.supabase.co): ")
-    supabase_anon_key = input("Supabase 匿名キー (anon key) を入力してください: ")
-
-    if not supabase_url.startswith("https://") or not supabase_url.endswith(".supabase.co"):
-        print("無効なSupabase URLです。正しいURLを入力してください。")
-        return None, None
-
-    if not supabase_anon_key.startswith("eyJ"):
-        print("無効な匿名キーです。正しいキーを入力してください。")
-        return None, None
-
-    print("\n重要: Supabaseダッシュボードで以下の設定を再確認してください：")
-    print("1. 認証 > プロバイダー > Googleが有効になっていること")
-    print("2. 認証 > URLの設定 > サイトURL、リダイレクトURLが正しく設定されていること")
-    print("3. APIキーが正しいこと")
-    print("4. Google Cloud ConsoleでリダイレクトURIが正しく設定されていること")
-
-    return supabase_url, supabase_anon_key
-
-def print_loading_animation(message, duration):
-    animation = "|/-\\"
-    idx = 0
-    start_time = time.time()
-    
-    while time.time() - start_time < duration:
-        print(f"\r{message} {animation[idx % len(animation)]}", end="", flush=True)
-        idx += 1
-        time.sleep(0.1)
-    
-    print("\r" + " " * (len(message) + 2), end="", flush=True)
-    print("\r", end="", flush=True)
-
-def deploy_to_vercel(supabase_url, supabase_anon_key):
-    print("Vercelにデプロイしています...")
-    try:
-        os.environ['NEXT_PUBLIC_SUPABASE_URL'] = supabase_url
-        os.environ['NEXT_PUBLIC_SUPABASE_ANON_KEY'] = supabase_anon_key
-
-        print("TypeScriptの型チェックを実行しています...")
-        print_loading_animation("型チェック中", 5)
-        type_check_result = run_command("npx tsc --noEmit")
-        if type_check_result.returncode != 0:
-            print("型チェックに失敗しました。エラーを確認してください:")
-            print(type_check_result.stderr)
-            return None
-
-        print("プロジェクトをビルドしています...")
-        print_loading_animation("ビルド中", 10)
-        build_result = run_command("npm run build")
-        if build_result.returncode != 0:
-            print("ビルドに失敗しました。エラーを確認してください:")
-            print(build_result.stderr)
-            return None
-
-        print("Vercel CLIをインストールしています...")
-        print_loading_animation("Vercel CLIインストール中", 5)
-        run_command("npm install -g vercel")
-
-        deploy_command = "vercel --confirm"
-        deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_URL={supabase_url}"
-        deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}"
-
-        print("Vercelにデプロイしています...")
-        print_loading_animation("デプロイ中", 30)
-        result = run_command(deploy_command)
-        
-        deploy_url = result.stdout.strip().split('\n')[-1]
-        return deploy_url
-    except subprocess.CalledProcessError as e:
-        print(f"Vercelへのデプロイ中にエラーが発生しました: {e}")
-        return None
-
-def main():
-    PROJECT_NAME = "frontend-next"
-    USE_TYPESCRIPT = len(sys.argv) <= 1 or sys.argv[1].lower() != 'no'
+def setup_project(PROJECT_NAME, USE_TYPESCRIPT):
     FILE_EXT = 'ts' if USE_TYPESCRIPT else 'js'
     TSX_EXT = 'tsx' if USE_TYPESCRIPT else 'jsx'
 
@@ -143,6 +82,10 @@ def main():
 
     print("追加の依存関係をインストールしています...")
     run_command("npm install @reduxjs/toolkit react-redux @supabase/auth-helpers-nextjs @supabase/auth-helpers-react @supabase/supabase-js")
+
+def create_project_files(PROJECT_NAME, USE_TYPESCRIPT):
+    FILE_EXT = 'ts' if USE_TYPESCRIPT else 'js'
+    TSX_EXT = 'tsx' if USE_TYPESCRIPT else 'jsx'
 
     directories = [
         'app/components', 'app/store', 'app/utils', 'app/types',
@@ -387,6 +330,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
     for file_path, content in files.items():
         create_file(file_path, content.strip())
 
+def update_package_json():
     with open('package.json', 'r') as f:
         package_json = json.load(f)
     
@@ -395,19 +339,107 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
     with open('package.json', 'w') as f:
         json.dump(package_json, f, indent=2)
 
-    supabase_url, supabase_anon_key = setup_supabase()
+def setup_supabase():
+    print("Supabaseプロジェクトの情報を入力してください")
+    print("\nGoogle認証の設定手順:")
+    print("1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。")
+    print("2. 新しいプロジェクトを作成します。")
+    print("3. 左側のメニューから「APIとサービス」>「OAuth同意画面」を選択し、設定します。")
+    print("4. 「APIとサービス」>「認証情報」から、「認証情報を作成」>「OAuthクライアントID」をクリックします。")
+    print("5. アプリケーションの種類として「ウェブアプリケーション」を選択します。")
+    print("6. 「承認済みのリダイレクトURI」に以下のURLを追加します:")
+    print("   https://[YOUR_PROJECT_ID].supabase.co/auth/v1/callback")
+    print("   （[YOUR_PROJECT_ID]は実際のSupabaseプロジェクトIDに置き換えてください）")
+    print("7. 「作成」をクリックし、表示されるクライアントIDとクライアントシークレットをコピーします。")
+    print("8. Supabaseダッシュボードの「認証」>「プロバイダー」>「Google」に移動します。")
+    print("9. 「有効」をオンにし、コピーしたクライアントIDとクライアントシークレットを貼り付けます。")
+    print("10. 「保存」をクリックします。")
+    print("\n上記の手順を完了してから、以下の情報を入力してください。\n")
 
-    if supabase_url and supabase_anon_key:
-        create_file('.env.local', f"""
-NEXT_PUBLIC_SUPABASE_URL={supabase_url}
-NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
-        """.strip())
+    supabase_url = input("Supabase URL を入力してください (例: https://xxxxxxxxxxxxxxxx.supabase.co): ")
+    supabase_anon_key = input("Supabase 匿名キー (anon key) を入力してください: ")
 
-        deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key)
-    else:
-        print("Supabaseの設定に失敗しました。手動で.env.localファイルを設定してください。")
-        deploy_url = None
+    if not supabase_url.startswith("https://") or not supabase_url.endswith(".supabase.co"):
+        print("無効なSupabase URLです。正しいURLを入力してください。")
+        return None, None
 
+    if not supabase_anon_key.startswith("eyJ"):
+        print("無効な匿名キーです。正しいキーを入力してください。")
+        return None, None
+
+    print("\n重要: Supabaseダッシュボードで以下の設定を再確認してください：")
+    print("1. 認証 > プロバイダー > Googleが有効になっていること")
+    print("2. 認証 > URLの設定 > サイトURL、リダイレクトURLが正しく設定されていること")
+    print("3. APIキーが正しいこと")
+    print("4. Google Cloud ConsoleでリダイレクトURIが正しく設定されていること")
+
+    return supabase_url, supabase_anon_key
+
+def print_loading_animation(message, duration):
+    animation = "|/-\\"
+    idx = 0
+    start_time = time.time()
+    
+    while time.time() - start_time < duration:
+        print(f"\r{message} {animation[idx % len(animation)]}", end="", flush=True)
+        idx += 1
+        time.sleep(0.1)
+    
+    print("\r" + " " * (len(message) + 2), end="", flush=True)
+    print("\r", end="", flush=True)
+
+def deploy_to_vercel(supabase_url, supabase_anon_key):
+    print("Vercelにデプロイしています...")
+    try:
+        os.environ['NEXT_PUBLIC_SUPABASE_URL'] = supabase_url
+        os.environ['NEXT_PUBLIC_SUPABASE_ANON_KEY'] = supabase_anon_key
+
+        print("TypeScriptの型チェックを実行しています...")
+        print_loading_animation("型チェック中", 5)
+        type_check_result = run_command("npx tsc --noEmit")
+        if type_check_result.returncode != 0:
+            print("型チェックに失敗しました。エラーを確認してください:")
+            print(type_check_result.stderr)
+            return None
+
+        print("プロジェクトをビルドしています...")
+        print_loading_animation("ビルド中", 10)
+        build_result = run_command("npm run build")
+        if build_result.returncode != 0:
+            print("ビルドに失敗しました。エラーを確認してください:")
+            print(build_result.stderr)
+            return None
+
+        print("Vercel CLIをインストールしています...")
+        print_loading_animation("Vercel CLIインストール中", 5)
+        run_command("npm install -g vercel")
+
+        deploy_command = "vercel --confirm"
+        deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_URL={supabase_url}"
+        deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}"
+
+        print("Vercelにデプロイしています...")
+        print_loading_animation("デプロイ中", 30)
+        result = run_command(deploy_command)
+        
+        deploy_url = result.stdout.strip().split('\n')[-1]
+        return deploy_url
+    except subprocess.CalledProcessError as e:
+        print(f"Vercelへのデプロイ中にエラーが発生しました: {e}")
+        return None
+
+def generate_file_tree(startpath):
+    tree = []
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        indent = ' ' * 4 * (level)
+        tree.append('{}{}/'.format(indent, os.path.basename(root)))
+        subindent = ' ' * 4 * (level + 1)
+        for f in files:
+            tree.append('{}{}'.format(subindent, f))
+    return '\n'.join(tree)
+
+def create_readme(PROJECT_NAME, deploy_url):
     readme_content = f"""
 # Task Manager
 
@@ -469,6 +501,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
 
     create_file('README.md', readme_content.strip())
 
+def print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url):
     print("プロジェクトのセットアップが完了しました。")
     if supabase_url and supabase_anon_key:
         print("Supabaseの設定が完了し、.env.localファイルに保存されました。")
@@ -484,6 +517,46 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
     print("ローカルで開発サーバーを起動するには、以下のコマンドを実行してください：")
     print(f"cd {PROJECT_NAME}")
     print("npm run dev")
+
+def main():
+    PROJECT_NAME = "frontend-next"
+    USE_TYPESCRIPT = len(sys.argv) <= 1 or sys.argv[1].lower() != 'no'
+
+    # プロジェクトディレクトリの準備
+    if os.path.exists(PROJECT_NAME):
+        print(f"{PROJECT_NAME}ディレクトリが既に存在します。削除します...")
+        shutil.rmtree(PROJECT_NAME)
+
+    # プロジェクトのセットアップ
+    setup_project(PROJECT_NAME, USE_TYPESCRIPT)
+
+    # プロジェクトディレクトリに移動
+    os.chdir(PROJECT_NAME)
+
+    # プロジェクトファイルの作成
+    create_project_files(PROJECT_NAME, USE_TYPESCRIPT)
+
+    # package.jsonの更新
+    update_package_json()
+
+    # Supabaseのセットアップ
+    supabase_url, supabase_anon_key = setup_supabase()
+
+    # .env.localファイルの作成（Supabase情報がある場合）
+    if supabase_url and supabase_anon_key:
+        create_file('.env.local', f"""
+NEXT_PUBLIC_SUPABASE_URL={supabase_url}
+NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
+        """.strip())
+
+    # Vercelへのデプロイ
+    deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key) if supabase_url and supabase_anon_key else None
+
+    # README.mdの作成
+    create_readme(PROJECT_NAME, deploy_url)
+
+    # セットアップ完了メッセージの表示
+    print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
 
 if __name__ == "__main__":
     main()
