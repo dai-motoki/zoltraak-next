@@ -12,11 +12,12 @@ from rich import print as rprint
 console = Console()
 
 def main():
+    # PROJECT_NAME = input("プロジェクト名を入力してください: ")
     PROJECT_NAME = "frontend-next"
     USE_TYPESCRIPT = len(sys.argv) <= 1 or sys.argv[1].lower() != 'no'
 
     # プロジェクト情報の取得
-    project_id, vercel_project_name = get_project_info()
+    project_id, vercel_project_name = get_project_info(PROJECT_NAME)
 
     # プロジェクトディレクトリの準備
     if os.path.exists(PROJECT_NAME):
@@ -110,7 +111,7 @@ def setup_project(PROJECT_NAME, USE_TYPESCRIPT):
         result = run_command(" ".join(create_next_app_command))
         progress.update(task1, completed=True)
         if result.returncode != 0:
-            raise Exception(f"Next.jsプロジェクトの作成に失敗しました: {result.stderr}")
+            raise Exception(f"Next.jsプロ���ェクトの作成に失敗しました: {result.stderr}")
 
     os.chdir(PROJECT_NAME)
 
@@ -406,16 +407,16 @@ def update_package_json():
     with open('package.json', 'w') as f:
         json.dump(package_json, f, indent=2)
 
-def get_project_info():
-    console.print(Panel("[bold cyan]プロジェクト情報を入力してください[/bold cyan]"))
+def get_project_info(PROJECT_NAME):
+    console.print(Panel(f"[bold cyan]プロジェクト '{PROJECT_NAME}' の情報[/bold cyan]"))
     
-    project_id = input("SupabaseプロジェクトIDを入力してください: ")
-    vercel_project_name = input("Vercelプロジェクト名を入力してください: ")
+    project_id = PROJECT_NAME
+    vercel_project_name = PROJECT_NAME
     
     return project_id, vercel_project_name
 
 def setup_supabase(project_id):
-    console.print(Panel("[bold cyan]Supabaseプロジェクトの情報を入力してください[/bold cyan]"))
+    console.print(Panel(f"[bold cyan]Supabaseプロジェクト '{project_id}' の情報を入力してください[/bold cyan]"))
     console.print("\n[bold cyan]Google認証の設定手順:[/bold cyan]")
     console.print("[cyan]1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。[/cyan]")
     console.print("[cyan]2. 新しいプロジェクトを作成します。[/cyan]")
