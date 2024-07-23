@@ -33,7 +33,7 @@ def load_env_variables():
 async def run_dev_server(project_dir):
     os.chdir(project_dir)
     process = await asyncio.create_subprocess_shell(
-        "npx next dev",
+        "npm next dev",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
@@ -61,7 +61,7 @@ async def run_local_dev(PROJECT_NAME):
         console.print("[yellow]開発サーバーの起動を確認できませんでした。手動で確認してください。[/yellow]")
     return dev_process
 
-def main():
+async def main():
     # PROJECT_NAME = input("プロジェクト名を入力してください: ")
     PROJECT_NAME = "frontend-next"
     USE_TYPESCRIPT = len(sys.argv) <= 1 or sys.argv[1].lower() != 'no'
@@ -140,6 +140,16 @@ NEXT_PUBLIC_SUPABASE_CALLBACK_URL={callback_url}
     # セットアップ完了メッセージの表示
     print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
 
+    # ローカル開発サーバーの起動
+    dev_process = await run_local_dev(PROJECT_NAME)
+
+    # ユーザーが Ctrl+C を押すまで待機
+    try:
+        await dev_process.communicate()
+    except asyncio.CancelledError:
+        dev_process.terminate()
+        await dev_process.wait()
+
 def run_command(command, shell=True):
     return subprocess.run(command, shell=shell, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -189,7 +199,7 @@ def setup_project(PROJECT_NAME, USE_TYPESCRIPT):
         transient=True
     ) as progress:
         task2 = progress.add_task("[cyan]追加の依存関係をインストールしています...", total=None)
-        result = run_command("npm install @reduxjs/toolkit react-redux @supabase/auth-helpers-nextjs @supabase/auth-helpers-react @supabase/supabase-js")
+        result = run_command("npm install @reduxjs/toolkit react-redux @supabase/auth-helpers-nextjs @supabase/auth-helpers-react @supabase/supabase-js framer-motion")
         progress.update(task2, completed=True)
         if result.returncode != 0:
             raise Exception(f"依存関係のインストールに失敗しました: {result.stderr}")
@@ -240,10 +250,14 @@ import LoginButton from './components/LoginButton'
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <h1 className="text-4xl font-bold">Task Manager</h1>
-      <LoginButton />
-      <TaskList />
+    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-r from-blue-100 to-purple-100">
+      <div className="bg-white shadow-2xl rounded-lg p-8 max-w-md w-full">
+        <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">タスク管理アプリ</h1>
+        <div className="mb-8 flex justify-center">
+          <LoginButton />
+        </div>
+        <TaskList />
+      </div>
     </main>
   )
 }
@@ -277,6 +291,7 @@ import { addTask, toggleTask, removeTask } from '../store/tasksSlice'
 import { useState } from 'react'
 import { RootState, AppDispatch } from '../store'
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function TaskList() {
   const tasks = useSelector((state: RootState) => state.tasks)
@@ -293,45 +308,54 @@ export default function TaskList() {
   }
 
   if (!session) {
-    return <div>Please log in to view and manage tasks.</div>
+    return <div className="text-center text-gray-600">タスクを表示・管理するにはログインしてください。</div>
   }
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md bg-white shadow-lg rounded-lg p-6">
       <div className="mb-4">
         <input
           type="text"
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          placeholder="New task"
+          placeholder="新しいタスク"
         />
         <button
           onClick={handleAddTask}
-          className="mt-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          className="mt-2 w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out transform hover:scale-105"
         >
-          Add Task
+          タスクを追加
         </button>
       </div>
-      <ul>
+      <AnimatePresence>
         {tasks.map((task) => (
-          <li key={task.id} className="mb-2 flex items-center">
+          <motion.div
+            key={task.id}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            className="mb-2 flex items-center bg-gray-100 p-3 rounded-lg"
+          >
             <input
               type="checkbox"
               checked={task.completed}
               onChange={() => dispatch(toggleTask(task.id))}
-              className="mr-2"
+              className="mr-2 form-checkbox h-5 w-5 text-blue-600"
             />
-            <span className={task.completed ? 'line-through' : ''}>{task.title}</span>
+            <span className={`flex-grow ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+              {task.title}
+            </span>
             <button
               onClick={() => dispatch(removeTask(task.id))}
-              className="ml-auto bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+              className="ml-2 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline transition duration-300 ease-in-out"
             >
-              Delete
+              削除
             </button>
-          </li>
+          </motion.div>
         ))}
-      </ul>
+      </AnimatePresence>
     </div>
   )
 }
@@ -340,44 +364,99 @@ export default function TaskList() {
 'use client'
 
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
 
 export default function LoginButton() {
   const session = useSession()
   const supabase = useSupabaseClient()
+  const [isLoading, setIsLoading] = useState(false)
 
   async function handleSignIn() {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
-    })
+    setIsLoading(true)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
 
-    if (error) {
-      console.error('Error signing in:', error)
+      if (error) {
+        console.error('ログインエラー:', error)
+        alert(`ログインエラー: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('予期せぬエラー:', error)
+      alert('予期せぬエラーが発生しました。コンソールを確認してください。')
     }
+    // ログイン処理が完了しても、リダイレクトされるまでローディング状態を維持
   }
 
   async function handleSignOut() {
-    const { error } = await supabase.auth.signOut()
-
-    if (error) {
-      console.error('Error signing out:', error)
+    setIsLoading(true)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('ログアウトエラー:', error)
+        alert(`ログアウトエラー: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('予期せぬエラー:', error)
+      alert('予期せぬエラーが発生しました。コンソールを確認してください。')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div>
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+    >
       {session ? (
-        <button onClick={handleSignOut} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
-          Sign Out
+        <button
+          onClick={handleSignOut}
+          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out flex items-center"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              ログアウト中...
+            </>
+          ) : (
+            'ログアウト'
+          )}
         </button>
       ) : (
-        <button onClick={handleSignIn} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-          Sign In with Google
+        <button
+          onClick={handleSignIn}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out flex items-center"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              ログイン中...
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#fff" d="M12.24 10.285V14.4h6.806c-.275 1.765-2.056 5.174-6.806 5.174-4.095 0-7.439-3.389-7.439-7.574s3.345-7.574 7.439-7.574c2.33 0 3.891.989 4.785 1.849l3.254-3.138C18.189 1.186 15.479 0 12.24 0c-6.635 0-12 5.365-12 12s5.365 12 12 12c6.926 0 11.52-4.869 11.52-11.726 0-.788-.085-1.39-.189-1.989H12.24z"/>
+              </svg>
+              Googleでログイン
+            </>
+          )}
         </button>
       )}
-    </div>
+    </motion.div>
   )
 }
         """,
@@ -436,7 +515,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URLまたは匿名キーが設定されていません。')
+  throw new Error('Supabase URLまたは匿名キーが設定されてい���せん。')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -484,6 +563,9 @@ def update_package_json():
     
     package_json['scripts']['lint'] = "next lint"
     package_json['dependencies']['@supabase/auth-helpers-nextjs'] = "^0.7.0"
+    package_json['dependencies']['framer-motion'] = "^10.12.16"
+    package_json['dependencies']['@reduxjs/toolkit'] = "^1.9.5"
+    package_json['dependencies']['react-redux'] = "^8.1.1"
     
     with open('package.json', 'w') as f:
         json.dump(package_json, f, indent=2)
@@ -510,7 +592,7 @@ def setup_supabase(project_id):
         console.print("[cyan]6. 「承認済みのリダイレクトURI」に以下のURLを追加します:[/cyan]")
         console.print(f"[cyan]   https://{project_id}.supabase.co/auth/v1/callback[/cyan]")
         console.print("[cyan]7. 「作成」をクリックし、表示されるクライアントIDとクライアントシークレットをコピーします。[/cyan]")
-        console.print("[cyan]8. Supabaseダッシュボードの「認証」>「プロバイダー」>「Google」に移動します。[/cyan]")
+        console.print("[cyan]8. Supabaseダッシュボードの「認証」>��プロバイダー」>「Google」に移動します。[/cyan]")
         console.print("[cyan]9. 「有効」をオンにし、コピーしたクライアントIDとクライアントシークレットを貼り付けます。[/cyan]")
         console.print("[cyan]10. 「保存」をクリックします。[/cyan]")
         console.print("\n[bold cyan]上記の手順を完了してから、以下の情報を入力してください。\n[/bold cyan]")
@@ -535,7 +617,7 @@ def setup_supabase(project_id):
     console.print(f"[cyan]3. APIキーが正しいこと（https://supabase.com/dashboard/project/{project_id}/settings/api）[/cyan]")
     console.print(f"[cyan]4. Google Cloud ConsoleでリダイレクトURIに {callback_url} が設定されていること（https://console.cloud.google.com/apis/credentials）[/cyan]")
 
-    console.print("\n[bold red]注意: Vercelにデプロイ後、以下の設定を必ず行ってください：[/bold red]")
+    console.print("\n[bold red]意: Vercelにデプロイ後、以下の設定を必ず行ってください：[/bold red]")
     console.print("[red]1. Supabaseダッシュボード > 認証 > URLの設定 > サイトURL: Vercelのデプロイ先URLを設定（https://supabase.com/dashboard/project/[YOUR_PROJECT_ID]/auth/url-configuration）[/red]")
     console.print("[red]2. Supabaseダッシュボード > 認証 > URLの設定 > リダイレクトURL: Vercelのデプロイ先URLに /auth/callback を追加（https://supabase.com/dashboard/project/[YOUR_PROJECT_ID]/auth/url-configuration）[/red]")
     console.print("[red]3. Google Cloud Console > 承認済みのリダイレクトURI: Vercelのデプロイ先URLに /auth/callback を追加（https://console.cloud.google.com/apis/credentials）[/red]")
@@ -707,9 +789,6 @@ def print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, 
     console.print("\n[bold cyan]ローカルで開発サーバーを起動するには、以下のコマンドを実行してください：[/bold cyan]")
     console.print(f"[green]cd {PROJECT_NAME}[/green]")
     console.print("[green]npm run dev[/green]")
-
-async def main():
-    # ... (rest of the code remains unchanged) ...
 
 if __name__ == "__main__":
     asyncio.run(main())
