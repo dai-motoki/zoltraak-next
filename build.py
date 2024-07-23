@@ -32,15 +32,16 @@ def load_env_variables():
 
 async def run_dev_server(project_dir):
     os.chdir(project_dir)
+    console.print(Panel("[bold cyan]ステップ 1: 開発サーバーを起動しています[/bold cyan]"))
     process = await asyncio.create_subprocess_shell(
-        "npm next dev",
+        "npm run dev",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE
     )
-    console.print("[green]開発サーバーを起動しました。http://localhost:3000 でアクセスできます。[/green]")
     return process
 
 async def wait_for_server(url, timeout=60):
+    console.print("[cyan]ステップ 2: サーバーの起動を確認しています...[/cyan]")
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
@@ -56,9 +57,9 @@ async def run_local_dev(PROJECT_NAME):
     dev_process = await run_dev_server(PROJECT_NAME)
     server_ready = await wait_for_server("http://localhost:3000")
     if server_ready:
-        console.print("[green]開発サーバーが正常に起動しました。[/green]")
+        console.print("[green]ステップ 3: 開発サーバーが正常に起動しました。[/green]")
     else:
-        console.print("[yellow]開発サーバーの起動を確認できませんでした。手動で確認してください。[/yellow]")
+        console.print("[yellow]ステップ 3: 開発サーバーの起動を確認できませんでした。手動で確認してください。[/yellow]")
     return dev_process
 
 async def main():
@@ -97,6 +98,17 @@ async def main():
 
     # package.jsonの更新
     update_package_json()
+
+    # ローカル開発サーバーの起動
+    console.print(Panel("[bold yellow]ステップ 1: ローカル開発サーバーを起動します[/bold yellow]"))
+    dev_process = await run_local_dev(PROJECT_NAME)
+
+    console.print(Panel(
+        "[bold green]ステップ 2: 開発サーバーが起動しました。\n"
+        "以下のURLでアクセスできます：\n"
+        "http://localhost:3000\n\n"
+        "サーバーを停止するには、Ctrl+C を押してください。[/bold green]"
+    ))
 
     # Supabaseのセットアップ
     supabase_url, supabase_anon_key, callback_url = setup_supabase(project_id)
@@ -140,15 +152,14 @@ NEXT_PUBLIC_SUPABASE_CALLBACK_URL={callback_url}
     # セットアップ完了メッセージの表示
     print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
 
-    # ローカル開発サーバーの起動
-    dev_process = await run_local_dev(PROJECT_NAME)
-
     # ユーザーが Ctrl+C を押すまで待機
     try:
         await dev_process.communicate()
     except asyncio.CancelledError:
+        console.print(Panel("[bold red]ステップ 3: 開発サーバーを停止しています...[/bold red]"))
         dev_process.terminate()
         await dev_process.wait()
+        console.print(Panel("[bold green]ステップ 4: 開発サーバーが正常に停止しました。[/bold green]"))
 
 def run_command(command, shell=True):
     return subprocess.run(command, shell=shell, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -515,7 +526,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URLまたは匿名キーが設定されてい���せん。')
+  throw new Error('Supabase URLまたは匿名キーが設定されていせん。')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
@@ -587,12 +598,12 @@ def setup_supabase(project_id):
         console.print("[cyan]1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。[/cyan]")
         console.print("[cyan]2. 新しいプロジェクトを作成します。[/cyan]")
         console.print("[cyan]3. 左側のメニューから「APIとサービス」>「OAuth同意画面」を選択し、設定します。[/cyan]")
-        console.print("[cyan]4. 「APIとサービス」>「認証情報」から「認証情報を作成>「OAuthクライアントID」をクリックします。[/cyan]")
+        console.print("[cyan]4. APIとサービス」>「認証情報」から「認��情報を作成>「OAuthクライアントID」をクリックします。[/cyan]")
         console.print("[cyan]5. アプリケーションの種類として「ウェブアプリケーション」を選択します。[/cyan]")
         console.print("[cyan]6. 「承認済みのリダイレクトURI」に以下のURLを追加します:[/cyan]")
         console.print(f"[cyan]   https://{project_id}.supabase.co/auth/v1/callback[/cyan]")
         console.print("[cyan]7. 「作成」をクリックし、表示されるクライアントIDとクライアントシークレットをコピーします。[/cyan]")
-        console.print("[cyan]8. Supabaseダッシュボードの「認証」>��プロバイダー」>「Google」に移動します。[/cyan]")
+        console.print("[cyan]8. Supabaseダッシュボードの「認証」>プロバイダー」>「Google」に移動します。[/cyan]")
         console.print("[cyan]9. 「有効」をオンにし、コピーしたクライアントIDとクライアントシークレットを貼り付けます。[/cyan]")
         console.print("[cyan]10. 「保存」をクリックします。[/cyan]")
         console.print("\n[bold cyan]上記の手順を完了してから、以下の情報を入力してください。\n[/bold cyan]")
@@ -612,16 +623,16 @@ def setup_supabase(project_id):
     callback_url = f"{supabase_url}/auth/v1/callback"
 
     console.print("\n[bold cyan]重要: Supabaseダッシュボードで以下の設定を再確認してください：[/bold cyan]")
-    console.print(f"[cyan]1. 認証 > プロバイダー > Googleが有効になっていること（https://supabase.com/dashboard/project/{project_id}/auth/providers）[/cyan]")
+    console.print(f"[cyan]1. 認証 > プロバイダー > Googleが有効になっていると（https://supabase.com/dashboard/project/{project_id}/auth/providers）[/cyan]")
     console.print(f"[cyan]2. 認証 > URLの設定 > サイトURL が正しく設定されていること（https://supabase.com/dashboard/project/{project_id}/auth/url-configuration）[/cyan]")
     console.print(f"[cyan]3. APIキーが正しいこと（https://supabase.com/dashboard/project/{project_id}/settings/api）[/cyan]")
     console.print(f"[cyan]4. Google Cloud ConsoleでリダイレクトURIに {callback_url} が設定されていること（https://console.cloud.google.com/apis/credentials）[/cyan]")
 
-    console.print("\n[bold red]意: Vercelにデプロイ後、以下の設定を必ず行ってください：[/bold red]")
+    console.print("\n[bold red]意: Vercelにデプロイ後、以の設定を必ず行ってください：[/bold red]")
     console.print("[red]1. Supabaseダッシュボード > 認証 > URLの設定 > サイトURL: Vercelのデプロイ先URLを設定（https://supabase.com/dashboard/project/[YOUR_PROJECT_ID]/auth/url-configuration）[/red]")
     console.print("[red]2. Supabaseダッシュボード > 認証 > URLの設定 > リダイレクトURL: Vercelのデプロイ先URLに /auth/callback を追加（https://supabase.com/dashboard/project/[YOUR_PROJECT_ID]/auth/url-configuration）[/red]")
     console.print("[red]3. Google Cloud Console > 承認済みのリダイレクトURI: Vercelのデプロイ先URLに /auth/callback を追加（https://console.cloud.google.com/apis/credentials）[/red]")
-    console.print("[red]これらの設定を行わないと、本番環境でのGoogle認証が正常に機能しない可能性があります。[/red]")
+    console.print("[red]これらの設定を行わないと、本番環境でのGoogle認証が正常に機能しない可能性があります[/red]")
 
     return supabase_url, supabase_anon_key, callback_url
 
@@ -669,7 +680,7 @@ def deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name):
         deploy_url = result.stdout.strip().split('\n')[-1]
         return deploy_url
     except subprocess.CalledProcessError as e:
-        console.print(f"[bold red]Vercelへのデプロイ中にエラーが発生しました: {e}[/bold red]")
+        console.print(f"[bold red]Vercelへのデプロイ中にエラが発生しました: {e}[/bold red]")
         return None
 
 def update_supabase_settings(project_id, api_key, site_url, callback_url):
