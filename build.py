@@ -6,7 +6,7 @@ import time
 import shutil
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich import print as rprint
 
 console = Console()
@@ -14,6 +14,9 @@ console = Console()
 def main():
     PROJECT_NAME = "frontend-next"
     USE_TYPESCRIPT = len(sys.argv) <= 1 or sys.argv[1].lower() != 'no'
+
+    # プロジェクト情報の取得
+    project_id, vercel_project_name = get_project_info()
 
     # プロジェクトディレクトリの準備
     if os.path.exists(PROJECT_NAME):
@@ -42,17 +45,25 @@ def main():
     update_package_json()
 
     # Supabaseのセットアップ
-    supabase_url, supabase_anon_key = setup_supabase()
+    supabase_url, supabase_anon_key, callback_url = setup_supabase(project_id)
 
     # .env.localファイルの作成（Supabase情報がある場合）
-    if supabase_url and supabase_anon_key:
+    if supabase_url and supabase_anon_key and callback_url:
         create_file('.env.local', f"""
 NEXT_PUBLIC_SUPABASE_URL={supabase_url}
 NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
+NEXT_PUBLIC_SUPABASE_CALLBACK_URL={callback_url}
         """.strip())
 
     # Vercelへのデプロイ
-    deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key) if supabase_url and supabase_anon_key else None
+    deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name) if supabase_url and supabase_anon_key else None
+
+    if deploy_url:
+        callback_url = f"{deploy_url}/auth/callback"
+        console.print("\n[bold cyan]デプロイ後の設定:[/bold cyan]")
+        console.print(f"[cyan]1. Supabaseダッシュボードで サイトURL を {deploy_url} に更新してください。[/cyan]")
+        console.print(f"[cyan]2. Supabaseダッシュボードで リダイレクトURL に {callback_url} を追加してください。[/cyan]")
+        console.print(f"[cyan]3. Google Cloud Consoleで 承認済みのリダイレクトURI に {callback_url} を追加してください。[/cyan]")
 
     # README.mdの作成
     create_readme(PROJECT_NAME, deploy_url)
@@ -90,17 +101,29 @@ def setup_project(PROJECT_NAME, USE_TYPESCRIPT):
     else:
         create_next_app_command.append("--js")
     
-    console.print("[cyan]Next.jsプロジェクトを作成しています...[/cyan]")
-    result = run_command(" ".join(create_next_app_command))
-    if result.returncode != 0:
-        raise Exception(f"Next.jsプロジェクトの作成に失敗しました: {result.stderr}")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True
+    ) as progress:
+        task1 = progress.add_task("[cyan]Next.jsプロジェクトを作成しています...", total=None)
+        result = run_command(" ".join(create_next_app_command))
+        progress.update(task1, completed=True)
+        if result.returncode != 0:
+            raise Exception(f"Next.jsプロジェクトの作成に失敗しました: {result.stderr}")
 
     os.chdir(PROJECT_NAME)
 
-    console.print("[cyan]追加の依存関係をインストールしています...[/cyan]")
-    result = run_command("npm install @reduxjs/toolkit react-redux @supabase/auth-helpers-nextjs @supabase/auth-helpers-react @supabase/supabase-js")
-    if result.returncode != 0:
-        raise Exception(f"依存関係のインストールに失敗しました: {result.stderr}")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True
+    ) as progress:
+        task2 = progress.add_task("[cyan]追加の依存関係をインストールしています...", total=None)
+        result = run_command("npm install @reduxjs/toolkit react-redux @supabase/auth-helpers-nextjs @supabase/auth-helpers-react @supabase/supabase-js")
+        progress.update(task2, completed=True)
+        if result.returncode != 0:
+            raise Exception(f"依存関係のインストールに失敗しました: {result.stderr}")
 
     os.chdir('..')  # 親ディレクトリに戻る
 
@@ -256,6 +279,9 @@ export default function LoginButton() {
   async function handleSignIn() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
     })
 
     if (error) {
@@ -346,6 +372,25 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
         """,
+        f'app/auth/callback/route.{FILE_EXT}': """
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get('code')
+
+  if (code) {
+    const supabase = createRouteHandlerClient({ cookies })
+    await supabase.auth.exchangeCodeForSession(code)
+  }
+
+  // URL to redirect to after sign in process completes
+  return NextResponse.redirect(requestUrl.origin)
+}
+        """,
     }
 
     for file_path, content in files.items():
@@ -356,11 +401,20 @@ def update_package_json():
         package_json = json.load(f)
     
     package_json['scripts']['lint'] = "next lint"
+    package_json['dependencies']['@supabase/auth-helpers-nextjs'] = "^0.7.0"
     
     with open('package.json', 'w') as f:
         json.dump(package_json, f, indent=2)
 
-def setup_supabase():
+def get_project_info():
+    console.print(Panel("[bold cyan]プロジェクト情報を入力してください[/bold cyan]"))
+    
+    project_id = input("SupabaseプロジェクトIDを入力してください: ")
+    vercel_project_name = input("Vercelプロジェクト名を入力してください: ")
+    
+    return project_id, vercel_project_name
+
+def setup_supabase(project_id):
     console.print(Panel("[bold cyan]Supabaseプロジェクトの情報を入力してください[/bold cyan]"))
     console.print("\n[bold cyan]Google認証の設定手順:[/bold cyan]")
     console.print("[cyan]1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。[/cyan]")
@@ -369,32 +423,40 @@ def setup_supabase():
     console.print("[cyan]4. 「APIとサービス」>「認証情報」から、「認証情報を作成」>「OAuthクライアントID」をクリックします。[/cyan]")
     console.print("[cyan]5. アプリケーションの種類として「ウェブアプリケーション」を選択します。[/cyan]")
     console.print("[cyan]6. 「承認済みのリダイレクトURI」に以下のURLを追加します:[/cyan]")
-    console.print("[cyan]   https://[YOUR_PROJECT_ID].supabase.co/auth/v1/callback[/cyan]")
-    console.print("[cyan]   （[YOUR_PROJECT_ID]は実際のSupabaseプロジェクトIDに置き換えてください）[/cyan]")
+    console.print(f"[cyan]   https://{project_id}.supabase.co/auth/v1/callback[/cyan]")
     console.print("[cyan]7. 「作成」をクリックし、表示されるクライアントIDとクライアントシークレットをコピーします。[/cyan]")
     console.print("[cyan]8. Supabaseダッシュボードの「認証」>「プロバイダー」>「Google」に移動します。[/cyan]")
     console.print("[cyan]9. 「有効」をオンにし、コピーしたクライアントIDとクライアントシークレットを貼り付けます。[/cyan]")
     console.print("[cyan]10. 「保存」をクリックします。[/cyan]")
     console.print("\n[bold cyan]上記の手順を完了してから、以下の情報を入力してください。\n[/bold cyan]")
 
-    supabase_url = input("Supabase URL を入力してください (例: https://xxxxxxxxxxxxxxxx.supabase.co): ")
-    supabase_anon_key = input("Supabase 匿名キー (anon key) を入力してください: ")
-
-    if not supabase_url.startswith("https://") or not supabase_url.endswith(".supabase.co"):
+    while True:
+        supabase_url = input(f"Supabase URL を入力してください (例: https://{project_id}.supabase.co): ")
+        if supabase_url.startswith("https://") and supabase_url.endswith(".supabase.co"):
+            break
         console.print("[bold red]無効なSupabase URLです。正しいURLを入力してください。[/bold red]")
-        return None, None
 
-    if not supabase_anon_key.startswith("eyJ"):
+    while True:
+        supabase_anon_key = input("Supabase 匿名キー (anon key) を入力してください: ")
+        if supabase_anon_key.startswith("eyJ"):
+            break
         console.print("[bold red]無効な匿名キーです。正しいキーを入力してください。[/bold red]")
-        return None, None
+
+    callback_url = f"{supabase_url}/auth/v1/callback"
 
     console.print("\n[bold cyan]重要: Supabaseダッシュボードで以下の設定を再確認してください：[/bold cyan]")
-    console.print("[cyan]1. 認証 > プロバイダー > Googleが有効になっていること[/cyan]")
-    console.print("[cyan]2. 認証 > URLの設定 > サイトURL、リダイレクトURLが正しく設定されていること[/cyan]")
-    console.print("[cyan]3. APIキーが正しいこと[/cyan]")
-    console.print("[cyan]4. Google Cloud ConsoleでリダイレクトURIが正しく設定されていること[/cyan]")
+    console.print(f"[cyan]1. 認証 > プロバイダー > Googleが有効になっていること（https://supabase.com/dashboard/project/{project_id}/auth/providers）[/cyan]")
+    console.print(f"[cyan]2. 認証 > URLの設定 > サイトURL が正しく設定されていること（https://supabase.com/dashboard/project/{project_id}/auth/url-configuration）[/cyan]")
+    console.print(f"[cyan]3. APIキーが正しいこと（https://supabase.com/dashboard/project/{project_id}/settings/api）[/cyan]")
+    console.print(f"[cyan]4. Google Cloud ConsoleでリダイレクトURIに {callback_url} が設定されていること（https://console.cloud.google.com/apis/credentials）[/cyan]")
 
-    return supabase_url, supabase_anon_key
+    console.print("\n[bold red]注意: Vercelにデプロイ後、以下の設定を必ず行ってください：[/bold red]")
+    console.print("[red]1. Supabaseダッシュボード > 認証 > URLの設定 > サイトURL: Vercelのデプロイ先URLを設定（https://supabase.com/dashboard/project/[YOUR_PROJECT_ID]/auth/url-configuration）[/red]")
+    console.print("[red]2. Supabaseダッシュボード > 認証 > URLの設定 > リダイレクトURL: Vercelのデプロイ先URLに /auth/callback を追加（https://supabase.com/dashboard/project/[YOUR_PROJECT_ID]/auth/url-configuration）[/red]")
+    console.print("[red]3. Google Cloud Console > 承認済みのリダイレクトURI: Vercelのデプロイ先URLに /auth/callback を追加（https://console.cloud.google.com/apis/credentials）[/red]")
+    console.print("[red]これらの設定を行わないと、本番環境でのGoogle認証が正常に機能しない可能性があります。[/red]")
+
+    return supabase_url, supabase_anon_key, callback_url
 
 def print_loading_animation(message, duration):
     with Progress() as progress:
@@ -403,14 +465,14 @@ def print_loading_animation(message, duration):
             progress.update(task, advance=1)
             time.sleep(duration / 100)
 
-def deploy_to_vercel(supabase_url, supabase_anon_key):
+def deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name):
     console.print(Panel("[bold green]Vercelにデプロイしています...[/bold green]"))
     try:
         os.environ['NEXT_PUBLIC_SUPABASE_URL'] = supabase_url
         os.environ['NEXT_PUBLIC_SUPABASE_ANON_KEY'] = supabase_anon_key
 
         console.print("[cyan]TypeScriptの型チェックを実行しています...[/cyan]")
-        print_loading_animation("型チェック中", 5)
+        print_loading_animation("", 5)
         type_check_result = run_command("npx tsc --noEmit")
         if type_check_result.returncode != 0:
             console.print("[bold red]型チェックに失敗しました。エラーを確認してください:[/bold red]")
@@ -418,7 +480,7 @@ def deploy_to_vercel(supabase_url, supabase_anon_key):
             return None
 
         console.print("[cyan]プロジェクトをビルドしています...[/cyan]")
-        print_loading_animation("ビルド中", 10)
+        print_loading_animation("", 20)
         build_result = run_command("npm run build")
         if build_result.returncode != 0:
             console.print("[bold red]ビルドに失敗しました。エラーを確認してください:[/bold red]")
@@ -426,15 +488,15 @@ def deploy_to_vercel(supabase_url, supabase_anon_key):
             return None
 
         console.print("[cyan]Vercel CLIをインストールしています...[/cyan]")
-        print_loading_animation("Vercel CLIインストール中", 5)
-        run_command("npm install -g vercel")
+        print_loading_animation("", 5)
+        run_command("npm install vercel")
 
-        deploy_command = "vercel --confirm"
+        deploy_command = f"vercel --name {vercel_project_name} --confirm"
         deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_URL={supabase_url}"
         deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}"
 
         console.print("[cyan]Vercelにデプロイしています...[/cyan]")
-        print_loading_animation("デプロイ中", 30)
+        print_loading_animation("", 180)
         result = run_command(deploy_command)
         
         deploy_url = result.stdout.strip().split('\n')[-1]
@@ -526,6 +588,10 @@ def print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, 
     if deploy_url:
         console.print(f"[green]プロジェクトがVercelにデプロイされました。以下のURLでアクセスできます：[/green]")
         console.print(f"[link={deploy_url}]{deploy_url}[/link]")
+        console.print("\n[bold red]重要: Vercelデプロイ後の設定を忘れずに行ってください：[/bold red]")
+        console.print("[red]1. SupabaseダッシュボードでサイトURLとリダイレクトURLを更新[/red]")
+        console.print("[red]2. Google Cloud ConsoleでリダイレクトURIを更新[/red]")
+        console.print("[red]詳細は上記の注意事項を参照してください。[/red]")
     else:
         console.print("[yellow]Vercelへのデプロイに失敗しました。手動でデプロイを行ってください。[/yellow]")
 
