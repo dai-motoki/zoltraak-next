@@ -4,6 +4,12 @@ import sys
 import json
 import time
 import shutil
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress
+from rich import print as rprint
+
+console = Console()
 
 def main():
     PROJECT_NAME = "frontend-next"
@@ -11,19 +17,19 @@ def main():
 
     # プロジェクトディレクトリの準備
     if os.path.exists(PROJECT_NAME):
-        print(f"{PROJECT_NAME}ディレクトリが既に存在します。削除します...")
+        console.print(f"[yellow]{PROJECT_NAME}ディレクトリが既に存在します。削除します...[/yellow]")
         shutil.rmtree(PROJECT_NAME)
 
     # プロジェクトのセットアップ
     try:
         setup_project(PROJECT_NAME, USE_TYPESCRIPT)
     except Exception as e:
-        print(f"プロジェクトのセットアップ中にエラーが発生しました: {e}")
+        console.print(f"[bold red]プロジェクトのセットアップ中にエラーが発生しました: {e}[/bold red]")
         return
 
     # プロジェクトディレクトリの存在確認
     if not os.path.exists(PROJECT_NAME):
-        print(f"{PROJECT_NAME}ディレクトリが作成されませんでした。")
+        console.print(f"[bold red]{PROJECT_NAME}ディレクトリが作成されませんでした。[/bold red]")
         return
 
     # プロジェクトディレクトリに移動
@@ -68,7 +74,7 @@ def create_file(path, content):
     with open(path, 'w') as f:
         f.write(content)
     
-    print(f"ファイル '{path}' が正常に作成されました。")
+    console.print(f"[green]ファイル '{path}' が正常に作成されました。[/green]")
 
 def setup_project(PROJECT_NAME, USE_TYPESCRIPT):
     FILE_EXT = 'ts' if USE_TYPESCRIPT else 'js'
@@ -84,14 +90,14 @@ def setup_project(PROJECT_NAME, USE_TYPESCRIPT):
     else:
         create_next_app_command.append("--js")
     
-    print("Next.jsプロジェクトを作成しています...")
+    console.print("[cyan]Next.jsプロジェクトを作成しています...[/cyan]")
     result = run_command(" ".join(create_next_app_command))
     if result.returncode != 0:
         raise Exception(f"Next.jsプロジェクトの作成に失敗しました: {result.stderr}")
 
     os.chdir(PROJECT_NAME)
 
-    print("追加の依存関係をインストールしています...")
+    console.print("[cyan]追加の依存関係をインストールしています...[/cyan]")
     result = run_command("npm install @reduxjs/toolkit react-redux @supabase/auth-helpers-nextjs @supabase/auth-helpers-react @supabase/supabase-js")
     if result.returncode != 0:
         raise Exception(f"依存関係のインストールに失敗しました: {result.stderr}")
@@ -355,77 +361,71 @@ def update_package_json():
         json.dump(package_json, f, indent=2)
 
 def setup_supabase():
-    print("Supabaseプロジェクトの情報を入力してください")
-    print("\nGoogle認証の設定手順:")
-    print("1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。")
-    print("2. 新しいプロジェクトを作成します。")
-    print("3. 左側のメニューから「APIとサービス」>「OAuth同意画面」を選択し、設定します。")
-    print("4. 「APIとサービス」>「認証情報」から、「認証情報を作成」>「OAuthクライアントID」をクリックします。")
-    print("5. アプリケーションの種類として「ウェブアプリケーション」を選択します。")
-    print("6. 「承認済みのリダイレクトURI」に以下のURLを追加します:")
-    print("   https://[YOUR_PROJECT_ID].supabase.co/auth/v1/callback")
-    print("   （[YOUR_PROJECT_ID]は実際のSupabaseプロジェクトIDに置き換えてください）")
-    print("7. 「作成」をクリックし、表示されるクライアントIDとクライアントシークレットをコピーします。")
-    print("8. Supabaseダッシュボードの「認証」>「プロバイダー」>「Google」に移動します。")
-    print("9. 「有効」をオンにし、コピーしたクライアントIDとクライアントシークレットを貼り付けます。")
-    print("10. 「保存」をクリックします。")
-    print("\n上記の手順を完了してから、以下の情報を入力してください。\n")
+    console.print(Panel("[bold cyan]Supabaseプロジェクトの情報を入力してください[/bold cyan]"))
+    console.print("\n[bold cyan]Google認証の設定手順:[/bold cyan]")
+    console.print("[cyan]1. Google Cloud Console (https://console.cloud.google.com/) にアクセスし、ログインします。[/cyan]")
+    console.print("[cyan]2. 新しいプロジェクトを作成します。[/cyan]")
+    console.print("[cyan]3. 左側のメニューから「APIとサービス」>「OAuth同意画面」を選択し、設定します。[/cyan]")
+    console.print("[cyan]4. 「APIとサービス」>「認証情報」から、「認証情報を作成」>「OAuthクライアントID」をクリックします。[/cyan]")
+    console.print("[cyan]5. アプリケーションの種類として「ウェブアプリケーション」を選択します。[/cyan]")
+    console.print("[cyan]6. 「承認済みのリダイレクトURI」に以下のURLを追加します:[/cyan]")
+    console.print("[cyan]   https://[YOUR_PROJECT_ID].supabase.co/auth/v1/callback[/cyan]")
+    console.print("[cyan]   （[YOUR_PROJECT_ID]は実際のSupabaseプロジェクトIDに置き換えてください）[/cyan]")
+    console.print("[cyan]7. 「作成」をクリックし、表示されるクライアントIDとクライアントシークレットをコピーします。[/cyan]")
+    console.print("[cyan]8. Supabaseダッシュボードの「認証」>「プロバイダー」>「Google」に移動します。[/cyan]")
+    console.print("[cyan]9. 「有効」をオンにし、コピーしたクライアントIDとクライアントシークレットを貼り付けます。[/cyan]")
+    console.print("[cyan]10. 「保存」をクリックします。[/cyan]")
+    console.print("\n[bold cyan]上記の手順を完了してから、以下の情報を入力してください。\n[/bold cyan]")
 
     supabase_url = input("Supabase URL を入力してください (例: https://xxxxxxxxxxxxxxxx.supabase.co): ")
     supabase_anon_key = input("Supabase 匿名キー (anon key) を入力してください: ")
 
     if not supabase_url.startswith("https://") or not supabase_url.endswith(".supabase.co"):
-        print("無効なSupabase URLです。正しいURLを入力してください。")
+        console.print("[bold red]無効なSupabase URLです。正しいURLを入力してください。[/bold red]")
         return None, None
 
     if not supabase_anon_key.startswith("eyJ"):
-        print("無効な匿名キーです。正しいキーを入力してください。")
+        console.print("[bold red]無効な匿名キーです。正しいキーを入力してください。[/bold red]")
         return None, None
 
-    print("\n重要: Supabaseダッシュボードで以下の設定を再確認してください：")
-    print("1. 認証 > プロバイダー > Googleが有効になっていること")
-    print("2. 認証 > URLの設定 > サイトURL、リダイレクトURLが正しく設定されていること")
-    print("3. APIキーが正しいこと")
-    print("4. Google Cloud ConsoleでリダイレクトURIが正しく設定されていること")
+    console.print("\n[bold cyan]重要: Supabaseダッシュボードで以下の設定を再確認してください：[/bold cyan]")
+    console.print("[cyan]1. 認証 > プロバイダー > Googleが有効になっていること[/cyan]")
+    console.print("[cyan]2. 認証 > URLの設定 > サイトURL、リダイレクトURLが正しく設定されていること[/cyan]")
+    console.print("[cyan]3. APIキーが正しいこと[/cyan]")
+    console.print("[cyan]4. Google Cloud ConsoleでリダイレクトURIが正しく設定されていること[/cyan]")
 
     return supabase_url, supabase_anon_key
 
 def print_loading_animation(message, duration):
-    animation = "|/-\\"
-    idx = 0
-    start_time = time.time()
-    
-    while time.time() - start_time < duration:
-        print(f"\r{message} {animation[idx % len(animation)]}", end="", flush=True)
-        idx += 1
-        time.sleep(0.1)
-    
-    print("\r" + " " * (len(message) + 2), end="", flush=True)
-    print("\r", end="", flush=True)
+    with Progress() as progress:
+        task = progress.add_task(f"[cyan]{message}", total=100)
+        while not progress.finished:
+            progress.update(task, advance=1)
+            time.sleep(duration / 100)
 
 def deploy_to_vercel(supabase_url, supabase_anon_key):
-    print("Vercelにデプロイしています...")
+    console.print(Panel("[bold green]Vercelにデプロイしています...[/bold green]"))
     try:
         os.environ['NEXT_PUBLIC_SUPABASE_URL'] = supabase_url
         os.environ['NEXT_PUBLIC_SUPABASE_ANON_KEY'] = supabase_anon_key
 
-        print("TypeScriptの型チェックを実行しています...")
+        console.print("[cyan]TypeScriptの型チェックを実行しています...[/cyan]")
         print_loading_animation("型チェック中", 5)
         type_check_result = run_command("npx tsc --noEmit")
         if type_check_result.returncode != 0:
-            print("型チェックに失敗しました。エラーを確認してください:")
-            print(type_check_result.stderr)
+            console.print("[bold red]型チェックに失敗しました。エラーを確認してください:[/bold red]")
+            console.print(type_check_result.stderr)
             return None
 
-        print("プロジェクトをビルドしています...")
+        console.print("[cyan]プロジェクトをビルドしています...[/cyan]")
         print_loading_animation("ビルド中", 10)
         build_result = run_command("npm run build")
         if build_result.returncode != 0:
-            print("ビルドに失敗しました。エラーを確認してください:")
-            print(build_result.stderr)
+            console.print("[bold red]ビルドに失敗しました。エラーを確認してください:[/bold red]")
+            console.print(build_result.stderr)
             return None
 
-        print("Vercel CLIをインストールしています...")
+        console.print("[cyan]Vercel CLIをインストールしています...[/cyan]")
         print_loading_animation("Vercel CLIインストール中", 5)
         run_command("npm install -g vercel")
 
@@ -433,14 +433,14 @@ def deploy_to_vercel(supabase_url, supabase_anon_key):
         deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_URL={supabase_url}"
         deploy_command += f" --build-env NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}"
 
-        print("Vercelにデプロイしています...")
+        console.print("[cyan]Vercelにデプロイしています...[/cyan]")
         print_loading_animation("デプロイ中", 30)
         result = run_command(deploy_command)
         
         deploy_url = result.stdout.strip().split('\n')[-1]
         return deploy_url
     except subprocess.CalledProcessError as e:
-        print(f"Vercelへのデプロイ中にエラーが発生しました: {e}")
+        console.print(f"[bold red]Vercelへのデプロイ中にエラーが発生しました: {e}[/bold red]")
         return None
 
 def generate_file_tree(startpath):
@@ -517,21 +517,21 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
     create_file('README.md', readme_content.strip())
 
 def print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url):
-    print("プロジェクトのセットアップが完了しました。")
+    console.print(Panel("[bold green]プロジェクトのセットアップが完了しました。[/bold green]"))
     if supabase_url and supabase_anon_key:
-        print("Supabaseの設定が完了し、.env.localファイルに保存されました。")
+        console.print("[cyan]Supabaseの設定が完了し、.env.localファイルに保存されました。[/cyan]")
     else:
-        print("Supabaseの設定を手動で行ってください。")
+        console.print("[yellow]Supabaseの設定を手動で行ってください。[/yellow]")
     
     if deploy_url:
-        print(f"プロジェクトがVercelにデプロイされました。以下のURLでアクセスできます：")
-        print(deploy_url)
+        console.print(f"[green]プロジェクトがVercelにデプロイされました。以下のURLでアクセスできます：[/green]")
+        console.print(f"[link={deploy_url}]{deploy_url}[/link]")
     else:
-        print("Vercelへのデプロイに失敗しました。手動でデプロイを行ってください。")
+        console.print("[yellow]Vercelへのデプロイに失敗しました。手動でデプロイを行ってください。[/yellow]")
 
-    print("ローカルで開発サーバーを起動するには、以下のコマンドを実行してください：")
-    print(f"cd {PROJECT_NAME}")
-    print("npm run dev")
+    console.print("\n[bold cyan]ローカルで開発サーバーを起動するには、以下のコマンドを実行してください：[/bold cyan]")
+    console.print(f"[green]cd {PROJECT_NAME}[/green]")
+    console.print("[green]npm run dev[/green]")
 
 if __name__ == "__main__":
     main()

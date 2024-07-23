@@ -1,0 +1,6 @@
+# 基本的な依存関係
+rich==13.3.5
+# Supabaseクライアント
+supabase
+# 環境変数の管理
+python-dotenv==1.0.0
