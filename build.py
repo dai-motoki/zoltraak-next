@@ -52,33 +52,33 @@ async def main():
     # プロジェクトファイルの作成
     create_project_files(PROJECT_NAME, USE_TYPESCRIPT)
 
-    # package.jsonの更新
-    update_package_json()
+#     # package.jsonの更新
+#     update_package_json()
 
-    # ローカル開発サーバーの起動
-    console.print(Panel("[bold yellow]ステップ 1: ローカル開発サーバーを起動します[/bold yellow]"))
-    # dev_process = await run_local_dev(PROJECT_NAME)
+#     # ローカル開発サーバーの起動
+#     console.print(Panel("[bold yellow]ステップ 1: ローカル開発サーバーを起動します[/bold yellow]"))
+#     # dev_process = await run_local_dev(PROJECT_NAME)
 
-    console.print(Panel(
-        "[bold green]ステップ 2: 開発サーバーが起動しました。\n"
-        "以下のURLでアクセスできます：\n"
-        "http://localhost:3000\n\n"
-        "サーバーを停止するには、Ctrl+C を押してください。[/bold green]"
-    ))
+#     console.print(Panel(
+#         "[bold green]ステップ 2: 開発サーバーが起動しました。\n"
+#         "以下のURLでアクセスできます：\n"
+#         "http://localhost:3000\n\n"
+#         "サーバーを停止するには、Ctrl+C を押してください。[/bold green]"
+#     ))
 
-    # Supabaseのセットアップ
-    supabase_url, supabase_anon_key, callback_url = setup_supabase(project_id)
+#     # Supabaseのセットアップ
+#     supabase_url, supabase_anon_key, callback_url = setup_supabase(project_id)
 
-    # .env.localファイルの作成（Supabase情報がある場合）
-    if supabase_url and supabase_anon_key and callback_url:
-        create_file('.env.local', f"""
-NEXT_PUBLIC_SUPABASE_URL={supabase_url}
-NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
-NEXT_PUBLIC_SUPABASE_CALLBACK_URL={callback_url}
-        """.strip())
+#     # .env.localファイルの作成（Supabase情報がある場合）
+#     if supabase_url and supabase_anon_key and callback_url:
+#         create_file('.env.local', f"""
+# NEXT_PUBLIC_SUPABASE_URL={supabase_url}
+# NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
+# NEXT_PUBLIC_SUPABASE_CALLBACK_URL={callback_url}
+#         """.strip())
 
     # Vercelへのデプロイ
-    deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name) if supabase_url and supabase_anon_key else None
+    # deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name) if supabase_url and supabase_anon_key else None
 
     if deploy_url:
         # .env.localファイルから情報を読み込む

@@ -23,16 +23,55 @@ def create_project_files(PROJECT_NAME, USE_TYPESCRIPT):
 
     directories = [
         'app/components', 'app/store', 'app/utils', 'app/types',
-        'app/features/auth', 'app/features/tasks'
+        'app/features/auth', 'app/features/tasks', 'app/tasks'
     ]
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
 
     files = {
+        '.gitignore': """
+# 依存関係
+/node_modules
+/.pnp
+.pnp.js
+
+# テスト
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# 本番環境
+/build
+
+# その他
+.DS_Store
+*.pem
+
+# デバッグ
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ローカル環境設定
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Supabase
+.env.local
+        """,
         f'app/layout.{TSX_EXT}': """
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
+import SideMenu from './components/SideMenu'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -49,21 +88,44 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="flex">
+            <SideMenu />
+            <main className="flex-grow ml-64 p-8">
+              {children}
+            </main>
+          </div>
+        </Providers>
       </body>
     </html>
   )
 }
         """,
         f'app/page.{TSX_EXT}': """
-import TaskList from './components/TaskList'
-import LoginButton from './components/LoginButton'
+import Link from 'next/link'
 
 export default function Home() {
   return (
+    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+      <h1 className="text-4xl font-bold mb-8">タスク管理アプリへようこそ</h1>
+      <Link href="/tasks">
+        <span className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+          タスク一覧へ
+        </span>
+      </Link>
+    </div>
+  )
+}
+        """,
+        f'app/tasks/page.{TSX_EXT}': """
+import TaskList from '../components/TaskList'
+import LoginButton from '../components/LoginButton'
+
+export default function Tasks() {
+  return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-r from-blue-100 to-purple-100">
       <div className="bg-white shadow-2xl rounded-lg p-8 max-w-md w-full">
-        <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">タスク管理アプリ</h1>
+        <h1 className="text-4xl font-bold text-center mb-8 text-gray-800">タスク管理</h1>
         <div className="mb-8 flex justify-center">
           <LoginButton />
         </div>
@@ -271,6 +333,41 @@ export default function LoginButton() {
   )
 }
         """,
+        f'app/components/SideMenu.{TSX_EXT}': """
+'use client'
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const menuItems = [
+  { name: 'ホーム', path: '/' },
+  { name: 'タスク', path: '/tasks' },
+  { name: 'プロフィール', path: '/profile' },
+];
+
+export default function SideMenu() {
+  const pathname = usePathname();
+
+  return (
+    <nav className="bg-gray-800 text-white h-screen w-64 fixed left-0 top-0 p-5">
+      <h2 className="text-2xl font-bold mb-5">タスク管理アプリ</h2>
+      <ul>
+        {menuItems.map((item) => (
+          <li key={item.path} className="mb-3">
+            <Link href={item.path}>
+              <span className={`block p-2 rounded ${
+                pathname === item.path ? 'bg-blue-600' : 'hover:bg-gray-700'
+              }`}>
+                {item.name}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+        """,
         f'app/store/index.{FILE_EXT}': """
 import { configureStore } from '@reduxjs/toolkit'
 import tasksReducer from './tasksSlice'
@@ -368,8 +465,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
         """.strip()
         create_file('.env.local', env_content)
         console.print("[green]新しい.env.localファイルを作成しました。[/green]")
-
-
 
 def create_file(path, content):
     if not path:

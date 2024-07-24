@@ -14,3 +14,36 @@
 __pycache__
 
 .next
+
+
+# Next.js関連の無視すべきファイル・ディレクトリ
+
+# ビルド出力
+.next/
+out/
+
+# 依存関係
+node_modules/
+
+# デバッグ
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ローカル環境設定
+.env*.local
+
+# Vercel関連
+.vercel
+
+# TypeScript関連
+*.tsbuildinfo
+next-env.d.ts
+
+# PWA関連
+public/sw.js
+public/workbox-*.js
+
+# その他
+.DS_Store
+*.pem
