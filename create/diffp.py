@@ -78,10 +78,10 @@ def apply_patch(original_content, diff_content):
         patch_command = f"patch -u {original_file.name} -i {patch_file.name}"
         logger.info(f"パッチコマンドを実行します: {patch_command}")
         try:
-            result = subprocess.run(patch_command, shell=True, capture_output=True, text=True, encoding='utf-8', timeout=10)
+            result = subprocess.run(patch_command, shell=True, capture_output=True, text=True, encoding='utf-8', timeout=3)
             logger.debug(f"パッチコマンドの実行結果: stdout={result.stdout}, stderr={result.stderr}")
         except subprocess.TimeoutExpired:
-            logger.error("パッチコマンドがタイムアウトしました")
+            logger.error("パッチコマンドが3秒でタイムアウトしました")
             raise
 
         with open(original_file.name, 'r', encoding='utf-8') as patched_file:
@@ -139,22 +139,22 @@ def diffp(file_name: str, request: str, save_diff: str):
         try:
             modified_content = apply_patch(original_content, diff_result)
         except subprocess.TimeoutExpired:
-            print("パッチの適用がタイムアウトしました。処理を中止します。")
+            print("パッチの適用が3秒でタイムアウトしました。処理を中止します。")
             return None
         except Exception as e:
             print(f"パッチの適用中にエラーが発生しました: {str(e)}")
             return None
 
         # Diffを時間付きで保存（オプション）
-        if save_diff.lower() == 'y':
+        if save_diff == 'y':
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             diff_file_name = f"{file_name}_{timestamp}.diff"
             with open(diff_file_name, 'w', encoding='utf-8') as diff_file:
                 diff_file.write(diff_result)
+            print(f"Diffが{diff_file_name}に保存されました。")
+        else:
+            diff_file_name = None
 
-        print(f"Diffが{diff_file_name}に保存されました。")
-
-        # 変更後の内容をファイルに書き込む
         # 変更後の内容をファイルに書き込む
         with open(file_name, 'w', encoding='utf-8') as file:
             file.write(modified_content)
