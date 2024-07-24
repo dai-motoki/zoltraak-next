@@ -8,7 +8,7 @@
     <style>
         body {
             font-family: 'Noto Sans JP', sans-serif;
-            background-color: #f0f2f5;
+            background-color: #e6f2ff;
             margin: 0;
             padding: 0;
             display: flex;
@@ -18,8 +18,8 @@
         }
         .card-container {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
             max-width: 1200px;
             padding: 20px;
         }
@@ -29,20 +29,21 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             overflow: hidden;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #b3d9ff;
         }
         .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 255, 0.15);
         }
         .card-header {
-            background-color: #0000FF;
             color: white;
             padding: 10px;
             text-align: center;
         }
         .card-title {
-            margin: 5px 0;
+            margin: 0;
             font-size: 18px;
+            color: #0066cc;
             font-weight: 700;
         }
         .card-body {
@@ -50,29 +51,29 @@
         }
         .card-content {
             font-size: 14px;
-            color: #333;
+            color: #004080;
             line-height: 1.4;
         }
         .card-footer {
-            background-color: #f9f9f9;
+            background-color: #e6f2ff;
             padding: 10px;
             text-align: center;
         }
         .card-button {
-            background-color: #FFA500;
+            background-color: #0066cc;
             color: white;
             border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 14px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 13px;
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
         .card-button:hover {
-            background-color: #0000AA;
+            background-color: #FF8C00;
         }
     </style>
-</head>
+    </head>
 <body>
     <div class="card-container">
         <div class="card">
@@ -109,7 +110,7 @@
             </div>
         </div>
         <div class="card">
-            <div class="card-header" style="background-color: #FFA500;">
+            <div class="card-header">
                 <h2 class="card-title">カード4</h2>
             </div>
             <div class="card-body">
