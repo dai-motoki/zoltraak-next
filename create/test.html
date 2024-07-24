@@ -18,7 +18,7 @@
         }
         .card-container {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 10px;
             max-width: 1200px;
             padding: 20px;
@@ -31,17 +31,17 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         .card:hover {
-            transform: translateY(-3px);
+            transform: translateY(-5px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
         }
         .card-header {
-            background-color: #FFA500;
+            background-color: #0000FF;
             color: white;
             padding: 10px;
             text-align: center;
         }
         .card-title {
-            margin: 0;
+            margin: 5px 0;
             font-size: 18px;
             font-weight: 700;
         }
@@ -69,7 +69,7 @@
             transition: background-color 0.3s ease;
         }
         .card-button:hover {
-            background-color: #45a049;
+            background-color: #0000AA;
         }
     </style>
 </head>
@@ -110,7 +110,7 @@
         </div>
         <div class="card">
             <div class="card-header" style="background-color: #FFA500;">
-                <h2 class="card-title" style="color: red;">カード4</h2>
+                <h2 class="card-title">カード4</h2>
             </div>
             <div class="card-body">
                 <p class="card-content">使いやすいUIデザイン。</p>

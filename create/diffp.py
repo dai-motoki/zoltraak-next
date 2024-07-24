@@ -7,6 +7,7 @@ import difflib
 import tempfile
 import subprocess
 import os
+import datetime
 
 # ログの設定
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -126,7 +127,7 @@ def diffp(file_name: str, request: str):
         colored_diff = diff_result.replace('-', '\033[91m-').replace('+', '\033[92m+').replace('@', '\033[94m@')
         print(colored_diff + '\033[0m')
 
-        # ユーザーに確認
+        # ユーザーに確認と変更の保存
         user_input = input("変更を適用しますか？ (y/n): ")
         if user_input.lower() != 'y':
             print("変更を中止しました。")
@@ -143,6 +144,15 @@ def diffp(file_name: str, request: str):
             print(f"パッチの適用中にエラーが発生しました: {str(e)}")
             return None
 
+        # Diffを時間付きで保存
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        diff_file_name = f"{file_name}_{timestamp}.diff"
+        with open(diff_file_name, 'w', encoding='utf-8') as diff_file:
+            diff_file.write(diff_result)
+
+        print(f"Diffが{diff_file_name}に保存されました。")
+
+        # 変更後の内容をファイルに書き込む
         # 変更後の内容をファイルに書き込む
         with open(file_name, 'w', encoding='utf-8') as file:
             file.write(modified_content)
