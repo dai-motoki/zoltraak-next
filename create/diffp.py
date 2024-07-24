@@ -168,7 +168,7 @@ def diffp(file_name: str, request: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ファイルに対して要望に基づいた変更を行います。")
     parser.add_argument("-f", "--file", required=True, help="変更対象のファイル名")
-    parser.add_argument("-r", "--request", required=True, help="変更の要望")
+    parser.add_argument("-r", "--request", required=True, help="変更の要望。'-rf'で指定したファイルの内容を要求として使用")
     
     args = parser.parse_args()
     
