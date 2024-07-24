@@ -15,6 +15,9 @@ import asyncio
 from create_project_files import create_project_files, create_file
 
 console = Console()
+# グローバル変数
+supabase_url = None
+supabase_anon_key = None
 
 
 async def main():
@@ -80,33 +83,33 @@ async def main():
     # Vercelへのデプロイ
     # deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name) if supabase_url and supabase_anon_key else None
 
-    if deploy_url:
-        # .env.localファイルから情報を読み込む
-        with open('.env.local', 'r') as env_file:
-            env_content = env_file.read()
+    # if deploy_url:
+    #     # .env.localファイルから情報を読み込む
+    #     with open('.env.local', 'r') as env_file:
+    #         env_content = env_file.read()
         
-        # URLを抽出
-        supabase_url = re.search(r'NEXT_PUBLIC_SUPABASE_URL=(.*)', env_content).group(1)
+    #     # URLを抽出
+    #     supabase_url = re.search(r'NEXT_PUBLIC_SUPABASE_URL=(.*)', env_content).group(1)
         
-        # プロジェクトIDを抽出
-        supabase_project_id = supabase_url.split('//')[1].split('.')[0]
+    #     # プロジェクトIDを抽出
+    #     supabase_project_id = supabase_url.split('//')[1].split('.')[0]
         
-        # APIキーを抽出
-        supabase_api_key = re.search(r'NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)', env_content).group(1)
+    #     # APIキーを抽出
+    #     supabase_api_key = re.search(r'NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)', env_content).group(1)
         
-        console.print(f"[green]SupabaseプロジェクトID: {supabase_project_id}[/green]")
-        console.print(f"[green]Supabase管理APIキー: {supabase_api_key}[/green]")
-        callback_url = f"{deploy_url}/auth/callback"
-        update_supabase_settings(supabase_project_id, supabase_api_key, deploy_url, callback_url)
+    #     console.print(f"[green]SupabaseプロジェクトID: {supabase_project_id}[/green]")
+    #     console.print(f"[green]Supabase管理APIキー: {supabase_api_key}[/green]")
+    #     callback_url = f"{deploy_url}/auth/callback"
+    #     update_supabase_settings(supabase_project_id, supabase_api_key, deploy_url, callback_url)
 
-        console.print("\n[bold cyan]Google Cloud Consoleでの設定:[/bold cyan]")
-        console.print(f"[cyan]Google Cloud Consoleで、承認済みの���ダイレクトURIに {callback_url} を追加してください。[/cyan]")
+    #     console.print("\n[bold cyan]Google Cloud Consoleでの設定:[/bold cyan]")
+    #     console.print(f"[cyan]Google Cloud Consoleで、承認済みの���ダイレクトURIに {callback_url} を追加してください。[/cyan]")
 
-    # README.mdの作成
-    create_readme(PROJECT_NAME, deploy_url)
+    # # README.mdの作成
+    # create_readme(PROJECT_NAME, deploy_url)
 
-    # セットアップ完了メッセージの表示
-    print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
+    # # セットアップ完了メッセージの表示
+    # print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
 
     # 開発サーバーを停止
     # console.print(Panel("[bold red]ステップ 3: 開発サーバーを停止しています...[/bold red]"))
@@ -115,9 +118,6 @@ async def main():
     # console.print(Panel("[bold green]ステップ 4: 開発サーバーが正常に停止しました。[/bold green]"))
 
 
-# グローバル変数
-supabase_url = None
-supabase_anon_key = None
 
 def load_env_variables():
     global supabase_url, supabase_anon_key

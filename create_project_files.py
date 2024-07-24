@@ -72,6 +72,8 @@ import './globals.css'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
 import SideMenu from './components/SideMenu'
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -80,18 +82,21 @@ export const metadata = {
   description: 'A simple task manager built with Next.js, Redux, and Supabase',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const supabase = createServerComponentClient({ cookies })
+  const { data: { session } } = await supabase.auth.getSession()
+
   return (
     <html lang="en">
       <body className={inter.className}>
         <Providers>
           <div className="flex">
-            <SideMenu />
-            <main className="flex-grow ml-64 p-8">
+            {session && <SideMenu />}
+            <main className={`flex-grow ${session ? 'ml-64' : ''} p-8`}>
               {children}
             </main>
           </div>
@@ -338,6 +343,8 @@ export default function LoginButton() {
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
+import { useState } from 'react'
 
 const menuItems = [
   { name: 'ホーム', path: '/' },
@@ -347,11 +354,34 @@ const menuItems = [
 
 export default function SideMenu() {
   const pathname = usePathname();
+  const session = useSession()
+  const supabase = useSupabaseClient()
+  const [isLoading, setIsLoading] = useState(false)
+
+  async function handleSignOut() {
+    setIsLoading(true)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        console.error('ログアウトエラー:', error)
+        alert(`ログアウトエラー: ${error.message}`)
+      }
+    } catch (error) {
+      console.error('予期せぬエラー:', error)
+      alert('予期せぬエラーが発生しました。コンソールを確認してください。')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (!session) {
+    return null; // セッションがない場合は何も表示しない
+  }
 
   return (
-    <nav className="bg-gray-800 text-white h-screen w-64 fixed left-0 top-0 p-5">
+    <nav className="bg-gray-800 text-white h-screen w-64 fixed left-0 top-0 p-5 flex flex-col">
       <h2 className="text-2xl font-bold mb-5">タスク管理アプリ</h2>
-      <ul>
+      <ul className="flex-grow">
         {menuItems.map((item) => (
           <li key={item.path} className="mb-3">
             <Link href={item.path}>
@@ -364,6 +394,13 @@ export default function SideMenu() {
           </li>
         ))}
       </ul>
+      <button
+        onClick={handleSignOut}
+        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded shadow-md transition duration-300 ease-in-out"
+        disabled={isLoading}
+      >
+        {isLoading ? 'ログアウト中...' : 'ログアウト'}
+      </button>
     </nav>
   );
 }
@@ -445,6 +482,116 @@ export async function GET(request: NextRequest) {
 
   // URL to redirect to after sign in process completes
   return NextResponse.redirect(requestUrl.origin)
+}
+        """,
+        f'app/profile/page.{TSX_EXT}': """
+'use client'
+
+import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
+import { useEffect, useState } from 'react'
+
+export default function Profile() {
+  const session = useSession()
+  const supabase = useSupabaseClient()
+  const [loading, setLoading] = useState(true)
+  const [username, setUsername] = useState(null)
+  const [website, setWebsite] = useState(null)
+  const [avatar_url, setAvatarUrl] = useState(null)
+
+  useEffect(() => {
+    getProfile()
+  }, [session])
+
+  async function getProfile() {
+    try {
+      setLoading(true)
+      if (!session?.user) throw new Error('ユーザーが見つかりません')
+
+      let { data, error, status } = await supabase
+        .from('profiles')
+        .select(`username, website, avatar_url`)
+        .eq('id', session?.user.id)
+        .single()
+
+      if (error && status !== 406) {
+        throw error
+      }
+
+      if (data) {
+        setUsername(data.username)
+        setWebsite(data.website)
+        setAvatarUrl(data.avatar_url)
+      }
+    } catch (error) {
+      alert('エラーが発生しました。プロフィールの取得に失敗しました。')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function updateProfile({ username, website, avatar_url }) {
+    try {
+      setLoading(true)
+      if (!session?.user) throw new Error('ユーザーが見つかりません')
+
+      const updates = {
+        id: session?.user.id,
+        username,
+        website,
+        avatar_url,
+        updated_at: new Date().toISOString(),
+      }
+
+      let { error } = await supabase.from('profiles').upsert(updates)
+      if (error) throw error
+      alert('プロフィールが更新されました！')
+    } catch (error) {
+      alert('エラーが発生しました。プロフィールの更新に失敗しました。')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!session) {
+    return <div>プロフィールを表示するにはログインしてください。</div>
+  }
+
+  return (
+    <div className="form-widget">
+      <div>
+        <label htmlFor="email">Email</label>
+        <input id="email" type="text" value={session?.user?.email} disabled />
+      </div>
+      <div>
+        <label htmlFor="username">ユーザー名</label>
+        <input
+          id="username"
+          type="text"
+          value={username || ''}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+      </div>
+      <div>
+        <label htmlFor="website">ウェブサイト</label>
+        <input
+          id="website"
+          type="url"
+          value={website || ''}
+          onChange={(e) => setWebsite(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <button
+          className="button primary block"
+          onClick={() => updateProfile({ username, website, avatar_url })}
+          disabled={loading}
+        >
+          {loading ? '読み込み中...' : 'プロフィールを更新'}
+        </button>
+      </div>
+    </div>
+  )
 }
         """,
     }
