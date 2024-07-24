@@ -108,9 +108,10 @@ def modify_file_with_diff(file_name: str, original_content: str, modified_conten
     patched_content = apply_patch(original_content, diff)
     return patched_content
 
-def diffp(file_name: str, request: str):
+def diffp(file_name: str, request: str, save_diff: str):
     """
     指定されたファイルに対して要望に基づいた変更を行います。
+    :param save_diff: Diffを保存するかどうか (y/n)
 
     :param file_name: 変更対象のファイル名
     :param request: 変更の要望
@@ -125,7 +126,7 @@ def diffp(file_name: str, request: str):
         diff_result = create_diff_prompt(file_name, original_content, request)
 
         # カラフルにdiff結果を表示
-        colored_diff = diff_result.replace('-', '\033[91m-').replace('+', '\033[92m+').replace('@', '\033[94m@')
+        colored_diff = diff_result.replace('\n-', '\n\033[91m-').replace('\n+', '\n\033[92m+').replace('\n@', '\n\033[94m@')
         print(colored_diff + '\033[0m')
 
         # ユーザーに確認と変更の保存
@@ -137,7 +138,6 @@ def diffp(file_name: str, request: str):
         # パッチを適用する
         try:
             modified_content = apply_patch(original_content, diff_result)
-            print(modified_content)
         except subprocess.TimeoutExpired:
             print("パッチの適用がタイムアウトしました。処理を中止します。")
             return None
@@ -145,11 +145,12 @@ def diffp(file_name: str, request: str):
             print(f"パッチの適用中にエラーが発生しました: {str(e)}")
             return None
 
-        # Diffを時間付きで保存
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        diff_file_name = f"{file_name}_{timestamp}.diff"
-        with open(diff_file_name, 'w', encoding='utf-8') as diff_file:
-            diff_file.write(diff_result)
+        # Diffを時間付きで保存（オプション）
+        if save_diff.lower() == 'y':
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            diff_file_name = f"{file_name}_{timestamp}.diff"
+            with open(diff_file_name, 'w', encoding='utf-8') as diff_file:
+                diff_file.write(diff_result)
 
         print(f"Diffが{diff_file_name}に保存されました。")
 
@@ -168,8 +169,16 @@ def diffp(file_name: str, request: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ファイルに対して要望に基づいた変更を行います。")
     parser.add_argument("-f", "--file", required=True, help="変更対象のファイル名")
-    parser.add_argument("-r", "--request", required=True, help="変更の要望。'-rf'で指定したファイルの内容を要求として使用")
+    parser.add_argument("-r", "--request", help="変更の要望")
+    parser.add_argument("-s", "--save-diff", choices=['y', 'n'], default='n', help="Diffを保存するかどうか")
+    parser.add_argument("-rf", "--request-file", help="要求を含むファイル")
     
     args = parser.parse_args()
     
-    diffp(args.file, args.request)
+    if args.request_file:
+        with open(args.request_file, 'r', encoding='utf-8') as request_file:
+            request = request_file.read().strip()
+    else:
+        request = args.request
+    
+    diffp(args.file, request, args.save_diff)
