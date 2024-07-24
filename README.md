@@ -11,7 +11,10 @@ git clone https://github.com/dai-motoki/zoltraak-next.git
     cd zoltraak-next
    pip install -r requirements.txt
 
-3. ビルドスクリプトを実行します：
+3. 環境変数を設定します：
+   export ANTHROPIC_API_KEY=sk-ant-aaaaa
+
+4. ビルドスクリプトを実行します：
    python build.py
 
 

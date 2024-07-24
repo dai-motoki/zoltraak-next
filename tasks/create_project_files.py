@@ -29,7 +29,22 @@ def create_project_files(PROJECT_NAME, USE_TYPESCRIPT):
         os.makedirs(directory, exist_ok=True)
 
     files = {
-        '.gitignore': """
+        ".gitignore": "",
+        f"app/layout.{TSX_EXT}": "",
+        f"app/page.{TSX_EXT}": "",
+        f"app/providers.{TSX_EXT}": "",
+        f"app/tasks/page.{TSX_EXT}": "",
+        f"app/components/TaskList.{TSX_EXT}": "",
+        f"app/components/LoginButton.{TSX_EXT}": "",
+        f"app/components/SideMenu.{TSX_EXT}": "",
+        f"app/store/index.{FILE_EXT}": "",
+        f"app/store/tasksSlice.{FILE_EXT}": "",
+        f"app/utils/supabase.{FILE_EXT}": "",
+        f"app/auth/callback/route.{FILE_EXT}": "",
+        f"app/profile/page.{TSX_EXT}": "",
+    }
+
+    files[".gitignore"] = """
 # 依存関係
 /node_modules
 /.pnp
@@ -66,8 +81,9 @@ next-env.d.ts
 
 # Supabase
 .env.local
-        """,
-        f'app/layout.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/layout.{TSX_EXT}"] = """
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
@@ -105,8 +121,9 @@ export default async function RootLayout({
     </html>
   )
 }
-        """,
-        f'app/page.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/page.{TSX_EXT}"] = """
 import Link from 'next/link'
 
 export default function Home() {
@@ -121,8 +138,9 @@ export default function Home() {
     </div>
   )
 }
-        """,
-        f'app/tasks/page.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/tasks/page.{TSX_EXT}"] = """
 import TaskList from '../components/TaskList'
 import LoginButton from '../components/LoginButton'
 
@@ -139,8 +157,9 @@ export default function Tasks() {
     </main>
   )
 }
-        """,
-        f'app/providers.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/providers.{TSX_EXT}"] = """
 'use client'
 
 import { Provider } from 'react-redux'
@@ -160,8 +179,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </SessionContextProvider>
   )
 }
-        """,
-        f'app/components/TaskList.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/components/TaskList.{TSX_EXT}"] = """
 'use client'
 
 import { useSelector, useDispatch } from 'react-redux'
@@ -237,8 +257,9 @@ export default function TaskList() {
     </div>
   )
 }
-        """,
-        f'app/components/LoginButton.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/components/LoginButton.{TSX_EXT}"] = """
 'use client'
 
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
@@ -337,8 +358,9 @@ export default function LoginButton() {
     </motion.div>
   )
 }
-        """,
-        f'app/components/SideMenu.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/components/SideMenu.{TSX_EXT}"] = """
 'use client'
 
 import Link from 'next/link';
@@ -404,8 +426,9 @@ export default function SideMenu() {
     </nav>
   );
 }
-        """,
-        f'app/store/index.{FILE_EXT}': """
+    """.strip()
+
+    files[f"app/store/index.{FILE_EXT}"] = """
 import { configureStore } from '@reduxjs/toolkit'
 import tasksReducer from './tasksSlice'
 
@@ -417,8 +440,9 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>
 export type AppDispatch = typeof store.dispatch
-        """,
-        f'app/store/tasksSlice.{FILE_EXT}': """
+    """.strip()
+
+    files[f"app/store/tasksSlice.{FILE_EXT}"] = """
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 interface Task {
@@ -452,8 +476,9 @@ const tasksSlice = createSlice({
 
 export const { addTask, toggleTask, removeTask } = tasksSlice.actions
 export default tasksSlice.reducer
-        """,
-        f'app/utils/supabase.{FILE_EXT}': """
+    """.strip()
+
+    files[f"app/utils/supabase.{FILE_EXT}"] = """
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -464,8 +489,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-        """,
-        f'app/auth/callback/route.{FILE_EXT}': """
+    """.strip()
+
+    files[f"app/auth/callback/route.{FILE_EXT}"] = """
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
@@ -483,8 +509,9 @@ export async function GET(request: NextRequest) {
   // URL to redirect to after sign in process completes
   return NextResponse.redirect(requestUrl.origin)
 }
-        """,
-        f'app/profile/page.{TSX_EXT}': """
+    """.strip()
+
+    files[f"app/profile/page.{TSX_EXT}"] = """
 'use client'
 
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
@@ -593,35 +620,4 @@ export default function Profile() {
     </div>
   )
 }
-        """,
-    }
-
-    for file_path, content in files.items():
-        create_file(file_path, content.strip())
-
-    # .env.localファイルをプロジェクトディレクトリにコピー
-    if os.path.exists('../.env.local'):
-        shutil.copy('../.env.local', '.env.local')
-        console.print("[green].env.localファイルをプロジェクトディレクトリにコピーしました。[/green]")
-        console.print("[green]新しい.env.localファイルをコピーしました。[/green]")
-    else:
-        # .env.localファイルが存在しない場合、新しく作成
-        env_content = f"""
-NEXT_PUBLIC_SUPABASE_URL={supabase_url}
-NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
-        """.strip()
-        create_file('.env.local', env_content)
-        console.print("[green]新しい.env.localファイルを作成しました。[/green]")
-
-def create_file(path, content):
-    if not path:
-        raise ValueError("ファイルパスが空です。有効なパスを指定してください。")
-    
-    directory = os.path.dirname(path)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    
-    with open(path, 'w') as f:
-        f.write(content)
-    
-    console.print(f"[green]ファイル '{path}' が正常に作成されました。[/green]")
+    """.strip()
