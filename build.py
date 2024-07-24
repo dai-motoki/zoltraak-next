@@ -31,23 +31,23 @@ async def main():
     # プロジェクト情報の取得
     project_id, vercel_project_name = get_project_info(PROJECT_NAME)
 
-    # # プロジェクトディレクトリの準備
-    # if os.path.exists(PROJECT_NAME):
-    #     console.print(f"[yellow]{PROJECT_NAME}ディレクトリが既に存在します。削除します...[/yellow]")
-    #     shutil.rmtree(PROJECT_NAME)
+    # プロジェクトディレクトリの準備
+    if os.path.exists(PROJECT_NAME):
+        console.print(f"[yellow]{PROJECT_NAME}ディレクトリが既に存在します。削除します...[/yellow]")
+        shutil.rmtree(PROJECT_NAME)
 
 
-    # # プロジェクトのセットアップ
-    # try:
-    #     setup_project(PROJECT_NAME, USE_TYPESCRIPT)
-    # except Exception as e:
-    #     console.print(f"[bold red]プロジェクトのセットアップ中にエラーが発生しました: {e}[/bold red]")
-    #     return
+    # プロジェクトのセットアップ
+    try:
+        setup_project(PROJECT_NAME, USE_TYPESCRIPT)
+    except Exception as e:
+        console.print(f"[bold red]プロジェクトのセットアップ中にエラーが発生しました: {e}[/bold red]")
+        return
 
-    # # プロジェクトディレクトリの存在確認
-    # if not os.path.exists(PROJECT_NAME):
-    #     console.print(f"[bold red]{PROJECT_NAME}ディレクトリが作成されませんでした。[/bold red]")
-    #     return
+    # プロジェクトディレクトリの存在確認
+    if not os.path.exists(PROJECT_NAME):
+        console.print(f"[bold red]{PROJECT_NAME}ディレクトリが作成されませんでした。[/bold red]")
+        return
 
     # プロジェクトディレクトリに移動
     os.chdir(PROJECT_NAME)
@@ -55,67 +55,62 @@ async def main():
     # プロジェクトファイルの作成
     create_project_files(PROJECT_NAME, USE_TYPESCRIPT)
 
-#     # package.jsonの更新
-#     update_package_json()
+    # package.jsonの更新
+    update_package_json()
 
-#     # ローカル開発サーバーの起動
-#     console.print(Panel("[bold yellow]ステップ 1: ローカル開発サーバーを起動します[/bold yellow]"))
-#     # dev_process = await run_local_dev(PROJECT_NAME)
+    # ローカル開発サーバーの起動
+    console.print(Panel("[bold yellow]ステップ 1: ローカル開発サーバーを起動します[/bold yellow]"))
+    # dev_process = await run_local_dev(PROJECT_NAME)
 
-#     console.print(Panel(
-#         "[bold green]ステップ 2: 開発サーバーが起動しました。\n"
-#         "以下のURLでアクセスできます：\n"
-#         "http://localhost:3000\n\n"
-#         "サーバーを停止するには、Ctrl+C を押してください。[/bold green]"
-#     ))
+    console.print(Panel(
+        "[bold green]ステップ 2: 開発サーバーが起動しました。\n"
+        "以下のURLでアクセスできます：\n"
+        "http://localhost:3000\n\n"
+        "サーバーを停止するには、Ctrl+C を押してください。[/bold green]"
+    ))
 
-#     # Supabaseのセットアップ
-#     supabase_url, supabase_anon_key, callback_url = setup_supabase(project_id)
+    # Supabaseのセットアップ
+    supabase_url, supabase_anon_key, callback_url = setup_supabase(project_id)
 
-#     # .env.localファイルの作成（Supabase情報がある場合）
-#     if supabase_url and supabase_anon_key and callback_url:
-#         create_file('.env.local', f"""
-# NEXT_PUBLIC_SUPABASE_URL={supabase_url}
-# NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
-# NEXT_PUBLIC_SUPABASE_CALLBACK_URL={callback_url}
-#         """.strip())
+    # .env.localファイルの作成（Supabase情報がある場合）
+    if supabase_url and supabase_anon_key and callback_url:
+        create_file('.env.local', f"""
+NEXT_PUBLIC_SUPABASE_URL={supabase_url}
+NEXT_PUBLIC_SUPABASE_ANON_KEY={supabase_anon_key}
+NEXT_PUBLIC_SUPABASE_CALLBACK_URL={callback_url}
+        """.strip())
 
     # Vercelへのデプロイ
-    # deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name) if supabase_url and supabase_anon_key else None
+    deploy_url = deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name) if supabase_url and supabase_anon_key else None
 
-    # if deploy_url:
-    #     # .env.localファイルから情報を読み込む
-    #     with open('.env.local', 'r') as env_file:
-    #         env_content = env_file.read()
+    if deploy_url:
+        # .env.localファイルから情報を読み込む
+        with open('.env.local', 'r') as env_file:
+            env_content = env_file.read()
         
-    #     # URLを抽出
-    #     supabase_url = re.search(r'NEXT_PUBLIC_SUPABASE_URL=(.*)', env_content).group(1)
+        # URLを抽出
+        supabase_url = re.search(r'NEXT_PUBLIC_SUPABASE_URL=(.*)', env_content).group(1)
         
-    #     # プロジェクトIDを抽出
-    #     supabase_project_id = supabase_url.split('//')[1].split('.')[0]
+        # プロジェクトIDを抽出
+        supabase_project_id = supabase_url.split('//')[1].split('.')[0]
         
-    #     # APIキーを抽出
-    #     supabase_api_key = re.search(r'NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)', env_content).group(1)
+        # APIキーを抽出
+        supabase_api_key = re.search(r'NEXT_PUBLIC_SUPABASE_ANON_KEY=(.*)', env_content).group(1)
         
-    #     console.print(f"[green]SupabaseプロジェクトID: {supabase_project_id}[/green]")
-    #     console.print(f"[green]Supabase管理APIキー: {supabase_api_key}[/green]")
-    #     callback_url = f"{deploy_url}/auth/callback"
-    #     update_supabase_settings(supabase_project_id, supabase_api_key, deploy_url, callback_url)
+        console.print(f"[green]SupabaseプロジェクトID: {supabase_project_id}[/green]")
+        console.print(f"[green]Supabase管理APIキー: {supabase_api_key}[/green]")
+        callback_url = f"{deploy_url}/auth/callback"
+        update_supabase_settings(supabase_project_id, supabase_api_key, deploy_url, callback_url)
 
-    #     console.print("\n[bold cyan]Google Cloud Consoleでの設定:[/bold cyan]")
-    #     console.print(f"[cyan]Google Cloud Consoleで、承認済みの���ダイレクトURIに {callback_url} を追加してください。[/cyan]")
+        console.print("\n[bold cyan]Google Cloud Consoleでの設定:[/bold cyan]")
+        console.print(f"[cyan]Google Cloud Consoleで、承認済みの���ダイレクトURIに {callback_url} を追加してください。[/cyan]")
 
-    # # README.mdの作成
-    # create_readme(PROJECT_NAME, deploy_url)
+    # README.mdの作成
+    create_readme(PROJECT_NAME, deploy_url)
 
-    # # セットアップ完了メッセージの表示
-    # print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
+    # セットアップ完了メッセージの表示
+    print_setup_complete_message(PROJECT_NAME, supabase_url, supabase_anon_key, deploy_url)
 
-    # 開発サーバーを停止
-    # console.print(Panel("[bold red]ステップ 3: 開発サーバーを停止しています...[/bold red]"))
-    # dev_process.terminate()
-    # await dev_process.wait()
-    # console.print(Panel("[bold green]ステップ 4: 開発サーバーが正常に停止しました。[/bold green]"))
 
 
 
@@ -128,14 +123,6 @@ def load_env_variables():
         supabase_anon_key = os.getenv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
         console.print("[green].env.localファイルから環境変数を読み込みました。[/green]")
         
-        # # frontend-next/ に.env.local をコピーする
-        # frontend_next_dir = 'frontend-next'
-        # if not os.path.exists(frontend_next_dir):
-        #     os.makedirs(frontend_next_dir)
-        #     console.print(f"[green]{frontend_next_dir}ディレクトリを作成しました。[/green]")
-        
-        # shutil.copy('.env.local', os.path.join(frontend_next_dir, '.env.local'))
-        # console.print("[green].env.localファイルをfrontend-next/ディレクトリにコピーしました。[/green]")
     else:
         console.print("[yellow].env.localファイルが見つかりません。手動で入力が必要です。[/yellow]")
         create_env_local_file()
@@ -369,6 +356,8 @@ def deploy_to_vercel(supabase_url, supabase_anon_key, vercel_project_name):
         return deploy_url
     except subprocess.CalledProcessError as e:
         console.print(f"[bold red]Vercelへのデプロイ中にエラーが発生しました: {e}[/bold red]")
+        console.print(f"{frontend_next_dir} にて、npx tsc --noEmitで確認をお願いします")
+        console.print(result.stderr)
         return None
 
 def update_supabase_settings(project_id, api_key, site_url, callback_url):

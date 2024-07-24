@@ -494,9 +494,9 @@ export default function Profile() {
   const session = useSession()
   const supabase = useSupabaseClient()
   const [loading, setLoading] = useState(true)
-  const [username, setUsername] = useState(null)
-  const [website, setWebsite] = useState(null)
-  const [avatar_url, setAvatarUrl] = useState(null)
+  const [username, setUsername] = useState<string | null>(null)
+  const [website, setWebsite] = useState<string | null>(null)
+  const [avatar_url, setAvatarUrl] = useState<string | null>(null)
 
   useEffect(() => {
     getProfile()
@@ -529,7 +529,7 @@ export default function Profile() {
     }
   }
 
-  async function updateProfile({ username, website, avatar_url }) {
+  async function updateProfile({ username, website, avatar_url }: { username: string | null, website: string | null, avatar_url: string | null }) {
     try {
       setLoading(true)
       if (!session?.user) throw new Error('ユーザーが見つかりません')
